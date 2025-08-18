@@ -15,9 +15,14 @@ import (
 // ErrUnsupportedDocumentType is returned when the document type is not supported.
 var ErrUnsupportedDocumentType = errors.New("unsupported document type")
 
+// GenerativeModel is an interface that abstracts the genai.GenerativeModel.
+type GenerativeModel interface {
+	GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
+}
+
 // Client holds the genai client.
 type Client struct {
-	genaiClient *genai.GenerativeModel
+	genaiClient GenerativeModel
 	config      *configs.Config
 }
 
