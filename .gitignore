@@ -17,15 +17,15 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
+# Dependency directories (remove thecomment below to include it)
 # vendor/
+
+# Environment variables
+.env
 
 # Go workspace file
 go.work
 go.work.sum
-
-# env file
-.env
 
 # Editor/IDE
 # .idea/
