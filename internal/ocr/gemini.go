@@ -2,6 +2,7 @@ package ocr
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,9 @@ import (
 	"github.com/y-mitsuyoshi/kensho/internal/configs"
 	"google.golang.org/api/option"
 )
+
+// ErrUnsupportedDocumentType is returned when the document type is not supported.
+var ErrUnsupportedDocumentType = errors.New("unsupported document type")
 
 // Client holds the genai client.
 type Client struct {
@@ -43,7 +47,7 @@ func (c *Client) Close(client *genai.Client) {
 func (c *Client) ExtractText(ctx context.Context, imageData []byte, mimeType string, docType string) (string, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
-		return "", fmt.Errorf("unsupported document type: %s", docType)
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
 	}
 
 	// Build the JSON structure part of the prompt
