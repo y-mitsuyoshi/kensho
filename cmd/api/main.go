@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/y-mitsuyoshi/kensho/internal/configs"
 	"github.com/y-mitsuyoshi/kensho/internal/ocr"
 )
 
@@ -21,8 +22,12 @@ var ocrClient *ocr.Client
 
 func main() {
 	ctx := context.Background()
-	var err error
-	ocrClient, err = ocr.NewClient(ctx, os.Getenv("GEMINI_API_KEY"))
+	config, err := configs.LoadConfig("configs/document_types.yml")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	ocrClient, err = ocr.NewClient(ctx, os.Getenv("GEMINI_API_KEY"), config)
 	if err != nil {
 		log.Fatalf("Failed to create OCR client: %v", err)
 	}
@@ -72,8 +77,13 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mimeType := header.Header.Get("Content-Type")
+	docType := r.FormValue("document_type")
+	if docType == "" {
+		http.Error(w, "document_type is required", http.StatusBadRequest)
+		return
+	}
 
-	jsonString, err := ocrClient.ExtractText(r.Context(), imgBytes, mimeType)
+	jsonString, err := ocrClient.ExtractText(r.Context(), imgBytes, mimeType, docType)
 	if err != nil {
 		log.Printf("Error from OCR client: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to extract text: %v", err), http.StatusInternalServerError)
