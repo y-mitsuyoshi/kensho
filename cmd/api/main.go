@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -85,6 +86,10 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonString, err := ocrClient.ExtractText(r.Context(), imgBytes, mimeType, docType)
 	if err != nil {
+		if errors.Is(err, ocr.ErrUnsupportedDocumentType) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		log.Printf("Error from OCR client: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to extract text: %v", err), http.StatusInternalServerError)
 		return
