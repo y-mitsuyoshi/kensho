@@ -55,18 +55,9 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, 
 		return "", fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
 	}
 
-	// Build the JSON structure part of the prompt
-	var jsonFields []string
-	for key, desc := range doc.JSONStructure {
-		jsonFields = append(jsonFields, fmt.Sprintf(`- %s (%s)`, key, desc))
-	}
-	jsonStructureString := strings.Join(jsonFields, "\n")
-
-	// Combine the prompt template with the dynamic JSON structure
-	fullPrompt := fmt.Sprintf("%s\n%s", doc.Prompt, jsonStructureString)
-
+	// The full prompt, including instructions and JSON structure, is now defined in the YAML config.
 	prompt := []genai.Part{
-		genai.Text(fullPrompt),
+		genai.Text(doc.Prompt),
 	}
 
 	// Add labeled images to the prompt in the order specified by the config
