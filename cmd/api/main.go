@@ -66,8 +66,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
 
 	var docType string
-	imageDatas := make(map[string][]byte)
-	var mimeType string // Assuming single mime type for all parts.
+	fileParts := make(map[string]ocr.FilePart)
 
 	mr, err := r.MultipartReader()
 	if err != nil {
@@ -98,9 +97,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if strings.HasPrefix(formName, "image_") {
-			if mimeType == "" {
-				mimeType = part.Header.Get("Content-Type")
-			}
+			mimeType := part.Header.Get("Content-Type")
 			b, err := io.ReadAll(part)
 			part.Close()
 			if err != nil {
@@ -109,7 +106,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if len(b) > 0 {
 				key := strings.TrimPrefix(formName, "image_")
-				imageDatas[key] = b
+				fileParts[key] = ocr.FilePart{Content: b, MimeType: mimeType}
 			}
 			continue
 		}
@@ -132,19 +129,19 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate that all required image parts are present
 	for _, partName := range doc.ImageParts {
-		if _, ok := imageDatas[partName]; !ok {
+		if _, ok := fileParts[partName]; !ok {
 			http.Error(w, fmt.Sprintf("missing required image part: image_%s", partName), http.StatusBadRequest)
 			return
 		}
 	}
-	if len(imageDatas) == 0 {
+	if len(fileParts) == 0 {
 		http.Error(w, "at least one image is required", http.StatusBadRequest)
 		return
 	}
 
-	jsonString, err := ocrClient.ExtractText(r.Context(), imageDatas, mimeType, docType)
+	jsonString, err := ocrClient.ExtractText(r.Context(), fileParts, docType)
 	if err != nil {
-		if errors.Is(err, ocr.ErrUnsupportedDocumentType) {
+		if errors.Is(err, ocr.ErrUnsupportedDocumentType) || errors.Is(err, ocr.ErrUnsupportedMimeType) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

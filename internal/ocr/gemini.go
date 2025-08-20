@@ -16,6 +16,16 @@ import (
 // ErrUnsupportedDocumentType is returned when the document type is not supported.
 var ErrUnsupportedDocumentType = errors.New("unsupported document type")
 
+// ErrUnsupportedMimeType is returned when the MIME type of a file is not supported.
+var ErrUnsupportedMimeType = errors.New("unsupported MIME type")
+
+var supportedMimeTypes = map[string]bool{
+	"image/jpeg":        true,
+	"image/png":         true,
+	"image/webp":        true,
+	"application/pdf":   true,
+}
+
 // GenerativeModel is an interface that abstracts the genai.GenerativeModel.
 type GenerativeModel interface {
 	GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
@@ -49,49 +59,48 @@ func (c *Client) Close(client *genai.Client) {
 	}
 }
 
-// ExtractText sends an image to the Gemini API and asks it to extract information.
-func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, mimeType string, docType string) (string, error) {
+// FilePart represents a file part with its content and MIME type.
+type FilePart struct {
+	Content  []byte
+	MimeType string
+}
+
+// ExtractText sends one or more files (images or PDFs) to the Gemini API and asks it to extract information.
+func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart, docType string) (string, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
 	}
 
-	// The full prompt, including instructions and JSON structure, is now defined in the YAML config.
 	prompt := []genai.Part{
 		genai.Text(doc.Prompt),
 	}
 
-	// Normalize mimeType: strip parameters and handle accidental duplicate prefixes like "image/image/jpeg"
-	mimeType = strings.TrimSpace(mimeType)
-	if idx := strings.Index(mimeType, ";"); idx != -1 {
-		mimeType = strings.TrimSpace(mimeType[:idx])
-	}
-	if strings.Count(mimeType, "image/") > 1 {
-		if last := strings.LastIndex(mimeType, "image/"); last != -1 {
-			mimeType = mimeType[last:]
-		}
-	}
-
-	// Add labeled images to the prompt in the order specified by the config
 	for _, partName := range doc.ImageParts {
-		imageData, ok := imageDatas[partName]
+		part, ok := fileParts[partName]
 		if !ok {
-			// This should have been caught by the handler, but as a safeguard:
-			return "", fmt.Errorf("missing image data for part: %s", partName)
+			return "", fmt.Errorf("missing file data for part: %s", partName)
 		}
 
-		// If mimeType is empty or doesn't start with image/, try to detect from bytes
-		effectiveMime := mimeType
-		if effectiveMime == "" || !strings.HasPrefix(effectiveMime, "image/") {
-			detected := http.DetectContentType(imageData)
-			if strings.HasPrefix(detected, "image/") {
-				effectiveMime = detected
+		// Clean up MIME type
+		mimeType := strings.TrimSpace(part.MimeType)
+		if idx := strings.Index(mimeType, ";"); idx != -1 {
+			mimeType = strings.TrimSpace(mimeType[:idx])
+		}
+
+		// Validate MIME type
+		if !supportedMimeTypes[mimeType] {
+			// If not supported, try to detect from content
+			detectedMimeType := http.DetectContentType(part.Content)
+			if !supportedMimeTypes[detectedMimeType] {
+				return "", fmt.Errorf("%w: %s", ErrUnsupportedMimeType, mimeType)
 			}
+			mimeType = detectedMimeType
 		}
 
-		// Add a text part to label the image
-		prompt = append(prompt, genai.Text(fmt.Sprintf("\nImage part: %s", partName)))
-		prompt = append(prompt, genai.ImageData(strings.TrimPrefix(effectiveMime, "image/"), imageData))
+		// Add a text part to label the file, then the file data itself.
+		prompt = append(prompt, genai.Text(fmt.Sprintf("\nFile part: %s", partName)))
+		prompt = append(prompt, genai.Blob{MIMEType: mimeType, Data: part.Content})
 	}
 
 	resp, err := c.genaiClient.GenerateContent(ctx, prompt...)
