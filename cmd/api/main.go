@@ -61,58 +61,70 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Max file size: 100MB for all files in a single request
-	if err := r.ParseMultipartForm(100 << 20); err != nil {
-		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
+	// Limit request body to 100MB to avoid OOM
+	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
+
+	// We'll extract document_type from multipart parts to avoid pre-parsing the body
+	var docType string
+
+	// document type is validated by ocr client later
+
+	// Collect all uploaded files with field name "image"
+	var imageDatas [][]byte
+	var mimeType string
+
+	// Use MultipartReader to support multiple files with same field name
+	mr, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, "Could not parse multipart data", http.StatusBadRequest)
 		return
 	}
 
-	docType := r.FormValue("document_type")
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			http.Error(w, "Error reading multipart data", http.StatusBadRequest)
+			return
+		}
+		// Handle document_type field in multipart parts
+		if part.FormName() == "document_type" {
+			b, _ := io.ReadAll(part)
+			part.Close()
+			docType = string(b)
+			continue
+		}
+		if part.FormName() != "image" {
+			// skip other non-image parts
+			continue
+		}
+		if mimeType == "" {
+			mimeType = part.Header.Get("Content-Type")
+		}
+		b, err := io.ReadAll(part)
+		part.Close()
+		if err != nil {
+			http.Error(w, "Could not read file", http.StatusInternalServerError)
+			return
+		}
+		if len(b) > 0 {
+			imageDatas = append(imageDatas, b)
+		}
+	}
+
+	if len(imageDatas) == 0 {
+		http.Error(w, "at least one image is required", http.StatusBadRequest)
+		return
+	}
+
 	if docType == "" {
 		http.Error(w, "document_type is required", http.StatusBadRequest)
 		return
 	}
 
-	doc, ok := config.Documents[docType]
-	if !ok {
-		http.Error(w, "Unsupported document type", http.StatusBadRequest)
-		return
-	}
-
-	files := r.MultipartForm.File["images"]
-	if len(files) == 0 {
-		http.Error(w, "at least one image is required", http.StatusBadRequest)
-		return
-	}
-	if len(files) != doc.RequiredImages {
-		msg := fmt.Sprintf("invalid number of images for document type '%s': expected %d, got %d", docType, doc.RequiredImages, len(files))
-		http.Error(w, msg, http.StatusBadRequest)
-		return
-	}
-
-	var imgBytes [][]byte
-	var mimeType string
-	for _, header := range files {
-		file, err := header.Open()
-		if err != nil {
-			http.Error(w, "Could not open uploaded file", http.StatusInternalServerError)
-			return
-		}
-		defer file.Close()
-
-		bytes, err := io.ReadAll(file)
-		if err != nil {
-			http.Error(w, "Could not read file", http.StatusInternalServerError)
-			return
-		}
-		imgBytes = append(imgBytes, bytes)
-
-		if mimeType == "" {
-			mimeType = header.Header.Get("Content-Type")
-		}
-	}
-
-	jsonString, err := ocrClient.ExtractText(r.Context(), imgBytes, mimeType, docType)
+	jsonString, err := ocrClient.ExtractText(r.Context(), imageDatas, mimeType, docType)
 	if err != nil {
 		if errors.Is(err, ocr.ErrUnsupportedDocumentType) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

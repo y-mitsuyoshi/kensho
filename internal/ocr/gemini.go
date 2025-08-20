@@ -83,8 +83,30 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas [][]byte, mimeType 
 
 	// Assuming the first part of the response is the JSON text
 	if jsonText, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
-		return string(jsonText), nil
+		raw := string(jsonText)
+		cleaned := sanitizeJSONResponse(raw)
+		return cleaned, nil
 	}
 
 	return "", fmt.Errorf("unexpected response format from API")
+}
+
+// sanitizeJSONResponse attempts to extract a JSON object/array from a string
+// that may contain Markdown code fences or surrounding text. It returns the
+// inner JSON string if found, otherwise returns the trimmed original.
+func sanitizeJSONResponse(s string) string {
+	s = strings.TrimSpace(s)
+
+	// If the response contains triple-backtick fences like ```json ... ```
+	// remove them by extracting the first JSON-like substring.
+	// Find the first brace or bracket and the last matching closing char.
+	start := strings.IndexAny(s, "{[")
+	end := strings.LastIndexAny(s, "}]")
+	if start != -1 && end != -1 && end >= start {
+		return s[start : end+1]
+	}
+
+	// Fallback: strip backticks and trim whitespace.
+	s = strings.Trim(s, "`\n \t\r")
+	return s
 }
