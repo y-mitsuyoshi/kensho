@@ -1,40 +1,109 @@
-# Kensho
+# Kensho Go Library
 
-[](https://www.google.com/search?q=https://goreportcard.com/report/github.com/your-username/Kensho)
-[](https://www.google.com/search?q=https://pkg.go.dev/badge/license-MIT)
+[![Go Reference](https://pkg.go.dev/badge/github.com/y-mitsuyoshi/kensho.svg)](https://pkg.go.dev/github.com/y-mitsuyoshi/kensho)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`Kensho` は、Googleの最新AIモデルである **Gemini 2.5 Pro** を利用して、運転免許証やマイナンバーカードなどの本人確認書類から情報を高精度で抽出し、JSON形式で返すGo言語製のOCRサービスです。「券面情報」の読み取りと「検証」をコンセプトにしています。
+`Kensho` is a Go library that uses Google's **Gemini 2.5 Pro** model to extract information from identity documents like driver's licenses and My Number cards with high precision, returning it as a JSON object. The name is inspired by the concept of "Kensho" (見証), which means to "see and verify."
 
-## 📜 概要
+## ✨ Features
 
-このプロジェクトは、画像ファイルとして受け取った本人確認書類の券面をGeminiの強力なマルチモーダル機能で解析し、氏名、住所、生年月日、各種番号などの情報を構造化されたデータとして提供することを目的としています。
+- **High-Precision Extraction**: Leverages the Gemini 2.5 Pro model to accurately extract information even from tilted or reflective images.
+- **Structured JSON Output**: Returns structured JSON, making it easy to integrate with other systems.
+- **Optimized for Japanese ID Documents**: Fine-tuned for major Japanese identity documents.
+- **Advanced Image Preprocessing**: Includes built-in image preprocessing features like deskewing, contrast adjustment, and noise reduction to improve OCR accuracy.
+- **Simple Go Implementation**: Built with the standard library and the Google AI Go SDK for lightweight and fast performance.
 
-単純な文字起こしに留まらず、Geminiの理解能力を活かして、それぞれの情報が「何を意味するのか」を判断し、キーとバリューが整ったJSONを生成します。
+## 💻 Tech Stack
 
-## ✨ 特徴
+- **Language**: Go
+- **AI Model**: Google Gemini 2.5 Pro
+- **Key Library**: [Google AI Go SDK](https://github.com/google/generative-ai-go)
 
-  * **高精度な情報抽出**: Gemini 2.5 Proモデルの活用により、傾きや光の反射がある画像からでも正確に情報を抽出します。
-  * **JSON形式での出力**: 抽出した情報は、以下のように構造化されたJSON形式で返されるため、後続のシステムで容易に扱えます。
-  * **主要な本人確認書類に対応**: 主要な本人確認書類情報抽出に最適化されています。
-  * **Go言語によるシンプルな実装**: Go言語の標準ライブラリとGoogle AI Go SDKのみを使用しており、軽量かつ高速に動作します。
+## 🚀 Installation
 
-## 💻 技術スタック
+To add Kensho to your project, use `go get`:
 
-  * **言語**: Go
-  * **AIモデル**: Google Gemini 2.5 Pro
-  * **主要ライブラリ**: [Google AI Go SDK](https://github.com/google/generative-ai-go)
+```bash
+go get -u github.com/y-mitsuyoshi/kensho
+```
 
-## 🚀 使い方 (Usage)
+##  Usage
 
-### 1. APIキーの設定
+Here is a basic example of how to use the Kensho client.
 
-はじめに、プロジェクトのルートにある `.env.example` をコピーして `.env` ファイルを作成します。
+First, ensure you have set your Gemini API key as an environment variable:
+
+```bash
+export GEMINI_API_KEY="YOUR_API_KEY_HERE"
+```
+
+Then, you can use the client in your Go application:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/y-mitsuyoshi/kensho/kensho"
+)
+
+func main() {
+	ctx := context.Background()
+	apiKey := os.Getenv("GEMINI_API_KEY")
+
+	// Create a new client with the default embedded configuration
+	client, err := kensho.NewClient(ctx, apiKey)
+	if err != nil {
+		log.Fatalf("Failed to create kensho client: %v", err)
+	}
+	defer client.Close()
+
+	// Read your image file
+	// In a real application, you might get this from an HTTP request or other source.
+	frontImage, err := os.ReadFile("/path/to/your/image.jpg")
+	if err != nil {
+		log.Fatalf("Failed to read image file: %v", err)
+	}
+
+	// Prepare the file parts for the API call
+	fileParts := map[string]kensho.FilePart{
+		"front": {
+			Content:  frontImage,
+			MimeType: "image/jpeg",
+		},
+	}
+
+	// Specify the document type you want to extract
+	docType := "driver_license" // or "individual_number_card"
+
+	// Call the extraction method
+	jsonString, err := client.ExtractText(ctx, fileParts, docType)
+	if err != nil {
+		log.Fatalf("Failed to extract text: %v", err)
+	}
+
+	// The result is a clean JSON string
+	fmt.Println(jsonString)
+}
+```
+
+## 🌐 Example: Running as a Web Service
+
+This repository also includes a sample web server that exposes the Kensho library via an HTTP API.
+
+### 1. Set API Key
+
+First, copy the `.env.example` file to `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-次に、作成した `.env` ファイルを開き、`GEMINI_API_KEY` にご自身のAPIキーを設定してください。
+Then, open `.env` and add your `GEMINI_API_KEY`.
 
 ```dotenv
 # .env
@@ -42,41 +111,42 @@ PORT=8080
 GEMINI_API_KEY="YOUR_API_KEY_HERE"
 ```
 
-### 2. サービスの起動と実行
+### 2. Run the Service
 
-`make` コマンドを使用してサービスを管理します。
+You can manage the service using the provided `Makefile`.
 
-#### 起動
+#### Start the Server
 
-以下のコマンドで、Dockerコンテナをビルドしてバックグラウンドで起動します。
+This command builds the Docker container and starts it in the background.
 
 ```bash
 make up
 ```
 
-初回はイメージのビルドに時間がかかります。コンテナが正常に起動したかログで確認できます。
-
-#### ログの確認
+#### Check Logs
 
 ```bash
 make logs
 ```
 
-`listening on :8080` と表示されていれば、APIサーバーは正常にリクエストを待機しています。
+If you see `listening on :8080`, the server is ready.
 
-#### OCRの実行
+#### Send an OCR Request
 
-サーバーが起動したら、別のターミナルから `curl` コマンドで本人確認書類の画像を送信します。
+From another terminal, use `curl` to send an ID document image.
 
-- `image.png` の部分は、実際の画像ファイルへのパスに置き換えてください。
-- 対応している画像形式は `image/png`, `image/jpeg` などです。
+- Replace `/path/to/your/image.png` with the actual file path.
+- The server supports `image/png`, `image/jpeg`, and `image/webp`.
+- For a driver's license (`driver_license`), you can send `image_front` and `image_back`.
+- For an individual number card (`individual_number_card`), send `image_front`.
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/extract \
-  -F "image=@/path/to/your/image.png;type=image/png"
+  -F "document_type=driver_license" \
+  -F "image_front=@/path/to/your/image.png"
 ```
 
-成功すると、以下のようなJSONレスポンスが返ってきます。
+A successful request will return a JSON response like this:
 
 ```json
 {
@@ -89,20 +159,17 @@ curl -X POST http://localhost:8080/api/v1/extract \
 }
 ```
 
-### 3. その他のコマンド
+### 3. Other `make` Commands
 
-| コマンド | 説明 |
-| --- | --- |
-| `make up` | コンテナをビルドし、バックグラウンドで起動します。 |
-| `make down` | コンテナを停止し、関連するネットワークなどを削除します。 |
-| `make stop` | コンテナを停止します。 |
-| `make logs` | 実行中のコンテナのログを表示します。 |
-| `make shell` | 実行中の `api` サービスコンテナ内でシェルを起動します。デバッグに便利です。 |
-| `make build`| Dockerイメージをビルドします。 |
+| Command      | Description                                           |
+|--------------|-------------------------------------------------------|
+| `make up`    | Build and start containers in the background.         |
+| `make down`  | Stop and remove containers and associated networks.   |
+| `make stop`  | Stop the containers.                                  |
+| `make logs`  | View the logs of the running containers.              |
+| `make shell` | Start a shell inside the running `api` service container. |
+| `make build` | Build the Docker image.                               |
 
+## 📜 License
 
-## 📜 ライセンス
-
-このプロジェクトは **MIT License** のもとで公開されています。
-
------
+This project is released under the **MIT License**.

@@ -25,15 +25,14 @@ var (
 func main() {
 	ctx := context.Background()
 	var err error
-	configPath := "configs/document_types.yml"
 
-	kenshoClient, err = kensho.NewClient(ctx, os.Getenv("GEMINI_API_KEY"), configPath)
+	// The client now uses the default embedded configuration.
+	kenshoClient, err = kensho.NewClient(ctx, os.Getenv("GEMINI_API_KEY"))
 	if err != nil {
-		log.Fatalf("Failed to create OCR client: %v", err)
+		log.Fatalf("Failed to create kensho client: %v", err)
 	}
-	// Note: The genai.Client used to create the model is not directly exposed,
-	// so we can't defer its closure here. We'll rely on the application lifecycle
-	// to manage the connection.
+	// Defer closing the client to clean up resources.
+	defer kenshoClient.Close()
 
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/api/v1/extract", extractHandler)
