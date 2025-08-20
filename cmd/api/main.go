@@ -18,12 +18,15 @@ type Health struct {
 	Status string `json:"status"`
 }
 
-// Global OCR client
-var ocrClient *ocr.Client
+var (
+	ocrClient *ocr.Client
+	config    *configs.Config
+)
 
 func main() {
 	ctx := context.Background()
-	config, err := configs.LoadConfig("configs/document_types.yml")
+	var err error
+	config, err = configs.LoadConfig("configs/document_types.yml")
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -58,30 +61,55 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Max file size: 10MB
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	// Max file size: 10MB per file
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
 		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
 		return
 	}
 
-	file, header, err := r.FormFile("image")
-	if err != nil {
-		http.Error(w, "Could not get uploaded file", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	imgBytes, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "Could not read file", http.StatusInternalServerError)
-		return
-	}
-
-	mimeType := header.Header.Get("Content-Type")
 	docType := r.FormValue("document_type")
 	if docType == "" {
 		http.Error(w, "document_type is required", http.StatusBadRequest)
 		return
+	}
+
+	doc, ok := config.Documents[docType]
+	if !ok {
+		http.Error(w, "Unsupported document type", http.StatusBadRequest)
+		return
+	}
+
+	files := r.MultipartForm.File["images"]
+	if len(files) == 0 {
+		http.Error(w, "at least one image is required", http.StatusBadRequest)
+		return
+	}
+	if len(files) != doc.RequiredImages {
+		msg := fmt.Sprintf("invalid number of images for document type '%s': expected %d, got %d", docType, doc.RequiredImages, len(files))
+		http.Error(w, msg, http.StatusBadRequest)
+		return
+	}
+
+	var imgBytes [][]byte
+	var mimeType string
+	for _, header := range files {
+		file, err := header.Open()
+		if err != nil {
+			http.Error(w, "Could not open uploaded file", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		bytes, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "Could not read file", http.StatusInternalServerError)
+			return
+		}
+		imgBytes = append(imgBytes, bytes)
+
+		if mimeType == "" {
+			mimeType = header.Header.Get("Content-Type")
+		}
 	}
 
 	jsonString, err := ocrClient.ExtractText(r.Context(), imgBytes, mimeType, docType)

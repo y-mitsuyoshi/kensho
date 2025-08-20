@@ -11,6 +11,7 @@ documents:
       issue_date: "交付日"
       expiry_date: "有効期限"
       card_number: "免許の番号"
+    required_images: 2
   individual_number_card:
     prompt: |
       Please analyze the provided image of a Individual Number Card (マイナンバーカード).
@@ -24,3 +25,4 @@ documents:
       expiry_date: "有効期限"
       card_number: "マイナンバー"
       gender: "性別"
+    required_images: 1
