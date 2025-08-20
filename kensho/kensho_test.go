@@ -1,12 +1,12 @@
-package ocr
+package kensho
 
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/google/generative-ai-go/genai"
-	"github.com/y-mitsuyoshi/kensho/internal/configs"
 )
 
 // mockGenerativeModel is a mock implementation of the GenerativeModel interface.
@@ -22,18 +22,42 @@ func (m *mockGenerativeModel) GenerateContent(ctx context.Context, parts ...gena
 }
 
 func TestNewClient(t *testing.T) {
+	// Create a dummy config file for testing
+	configContent := `
+documents:
+  test_doc:
+    prompt: "test prompt"
+    image_parts: ["front"]
+`
+	configFile, err := os.CreateTemp("", "config-*.yml")
+	if err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+	defer os.Remove(configFile.Name())
+	if _, err := configFile.Write([]byte(configContent)); err != nil {
+		t.Fatalf("Failed to write to temp config file: %v", err)
+	}
+	configFile.Close()
+
 	t.Run("should return error when api key is not set", func(t *testing.T) {
-		_, err := NewClient(context.Background(), "", &configs.Config{})
+		_, err := NewClient(context.Background(), "", configFile.Name())
 		if err == nil {
 			t.Error("expected error, but got nil")
+		}
+	})
+
+	t.Run("should create new client successfully", func(t *testing.T) {
+		_, err := NewClient(context.Background(), "fake-api-key", configFile.Name())
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
 		}
 	})
 }
 
 func TestExtractText(t *testing.T) {
 	mockModel := &mockGenerativeModel{}
-	config := &configs.Config{
-		Documents: map[string]configs.Document{
+	config := &Config{
+		Documents: map[string]Document{
 			"test_doc": {
 				Prompt: "Extract data from this document.",
 				JSONStructure: map[string]string{

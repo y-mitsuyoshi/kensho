@@ -1,4 +1,4 @@
-package ocr
+package kensho
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
-	"github.com/y-mitsuyoshi/kensho/internal/configs"
 	"google.golang.org/api/option"
 )
 
@@ -34,13 +33,18 @@ type GenerativeModel interface {
 // Client holds the genai client.
 type Client struct {
 	genaiClient GenerativeModel
-	config      *configs.Config
+	config      *Config
 }
 
 // NewClient creates a new client for the Gemini API.
-func NewClient(ctx context.Context, apiKey string, config *configs.Config) (*Client, error) {
+func NewClient(ctx context.Context, apiKey string, configPath string) (*Client, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
+	}
+
+	config, err := LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
