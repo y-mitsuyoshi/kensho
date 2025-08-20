@@ -8,8 +8,9 @@ import (
 )
 
 type Document struct {
-	Prompt        string            `yaml:"prompt"`
-	JSONStructure map[string]string `yaml:"json_structure"`
+	Prompt         string            `yaml:"prompt"`
+	JSONStructure  map[string]string `yaml:"json_structure"`
+	RequiredImages int               `yaml:"required_images"`
 }
 
 type Config struct {
