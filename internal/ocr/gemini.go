@@ -91,7 +91,7 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, 
 
 		// Add a text part to label the image
 		prompt = append(prompt, genai.Text(fmt.Sprintf("\nImage part: %s", partName)))
-		prompt = append(prompt, genai.ImageData(effectiveMime, imageData))
+		prompt = append(prompt, genai.ImageData(strings.TrimPrefix(effectiveMime, "image/"), imageData))
 	}
 
 	resp, err := c.genaiClient.GenerateContent(ctx, prompt...)

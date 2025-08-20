@@ -114,7 +114,7 @@ func TestExtractText(t *testing.T) {
 					{
 						Content: &genai.Content{
 							Parts: []genai.Part{
-								genai.ImageData("image/png", []byte("fake image data")),
+								genai.ImageData("png", []byte("fake image data")),
 							},
 						},
 					},
