@@ -49,7 +49,7 @@ func (c *Client) Close(client *genai.Client) {
 }
 
 // ExtractText sends an image to the Gemini API and asks it to extract information.
-func (c *Client) ExtractText(ctx context.Context, imageDatas [][]byte, mimeType string, docType string) (string, error) {
+func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, mimeType string, docType string) (string, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
@@ -68,7 +68,16 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas [][]byte, mimeType 
 	prompt := []genai.Part{
 		genai.Text(fullPrompt),
 	}
-	for _, imageData := range imageDatas {
+
+	// Add labeled images to the prompt in the order specified by the config
+	for _, partName := range doc.ImageParts {
+		imageData, ok := imageDatas[partName]
+		if !ok {
+			// This should have been caught by the handler, but as a safeguard:
+			return "", fmt.Errorf("missing image data for part: %s", partName)
+		}
+		// Add a text part to label the image
+		prompt = append(prompt, genai.Text(fmt.Sprintf("\nImage part: %s", partName)))
 		prompt = append(prompt, genai.ImageData(mimeType, imageData))
 	}
 

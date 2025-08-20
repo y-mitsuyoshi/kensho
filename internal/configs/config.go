@@ -8,9 +8,9 @@ import (
 )
 
 type Document struct {
-	Prompt         string            `yaml:"prompt"`
-	JSONStructure  map[string]string `yaml:"json_structure"`
-	RequiredImages int               `yaml:"required_images"`
+	Prompt        string            `yaml:"prompt"`
+	JSONStructure map[string]string `yaml:"json_structure"`
+	ImageParts    []string          `yaml:"image_parts"`
 }
 
 type Config struct {
