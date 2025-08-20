@@ -30,21 +30,35 @@ type GenerativeModel interface {
 	GenerateContent(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error)
 }
 
-// Client holds the genai client.
+// Client holds the genai client and configuration.
 type Client struct {
-	genaiClient GenerativeModel
-	config      *Config
+	genaiClient     *genai.Client
+	generativeModel GenerativeModel
+	config          *Config
 }
 
-// NewClient creates a new client for the Gemini API.
-func NewClient(ctx context.Context, apiKey string, configPath string) (*Client, error) {
-	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
+// NewClient creates a new client for the Gemini API using the default embedded configuration.
+func NewClient(ctx context.Context, apiKey string) (*Client, error) {
+	config, err := loadDefaultConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load default config: %w", err)
 	}
+	return NewClientWithConfig(ctx, apiKey, *config)
+}
 
+// NewClientWithConfigPath creates a new client for the Gemini API using a configuration file from the specified path.
+func NewClientWithConfigPath(ctx context.Context, apiKey string, configPath string) (*Client, error) {
 	config, err := LoadConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %w", err)
+		return nil, fmt.Errorf("failed to load config from path %s: %w", configPath, err)
+	}
+	return NewClientWithConfig(ctx, apiKey, *config)
+}
+
+// NewClientWithConfig creates a new client for the Gemini API with a provided configuration struct.
+func NewClientWithConfig(ctx context.Context, apiKey string, config Config) (*Client, error) {
+	if apiKey == "" {
+		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
 	}
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
@@ -53,12 +67,16 @@ func NewClient(ctx context.Context, apiKey string, configPath string) (*Client, 
 	}
 
 	model := client.GenerativeModel("gemini-2.5-pro")
-	return &Client{genaiClient: model, config: config}, nil
+	return &Client{
+		genaiClient:     client,
+		generativeModel: model,
+		config:          &config,
+	}, nil
 }
 
 // Close closes the underlying genai client.
-func (c *Client) Close(client *genai.Client) {
-	if err := client.Close(); err != nil {
+func (c *Client) Close() {
+	if err := c.genaiClient.Close(); err != nil {
 		log.Printf("failed to close genai client: %v", err)
 	}
 }
@@ -127,7 +145,7 @@ func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart,
 		prompt = append(prompt, genai.Blob{MIMEType: mimeType, Data: processedContent})
 	}
 
-	resp, err := c.genaiClient.GenerateContent(ctx, prompt...)
+	resp, err := c.generativeModel.GenerateContent(ctx, prompt...)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate content: %w", err)
 	}
