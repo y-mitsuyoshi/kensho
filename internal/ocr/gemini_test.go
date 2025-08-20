@@ -63,7 +63,7 @@ func TestExtractText(t *testing.T) {
 			}, nil
 		}
 
-		result, err := client.ExtractText(context.Background(), []byte("fake image data"), "image/png", "test_doc")
+		result, err := client.ExtractText(context.Background(), [][]byte{[]byte("fake image data")}, "image/png", "test_doc")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -75,7 +75,7 @@ func TestExtractText(t *testing.T) {
 	})
 
 	t.Run("should return error when doc type is not supported", func(t *testing.T) {
-		_, err := client.ExtractText(context.Background(), []byte("fake image data"), "image/png", "unsupported_doc")
+		_, err := client.ExtractText(context.Background(), [][]byte{[]byte("fake image data")}, "image/png", "unsupported_doc")
 		if !errors.Is(err, ErrUnsupportedDocumentType) {
 			t.Errorf("expected error %v, but got %v", ErrUnsupportedDocumentType, err)
 		}
@@ -86,7 +86,7 @@ func TestExtractText(t *testing.T) {
 			return nil, errors.New("api error")
 		}
 
-		_, err := client.ExtractText(context.Background(), []byte("fake image data"), "image/png", "test_doc")
+		_, err := client.ExtractText(context.Background(), [][]byte{[]byte("fake image data")}, "image/png", "test_doc")
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -99,7 +99,7 @@ func TestExtractText(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.ExtractText(context.Background(), []byte("fake image data"), "image/png", "test_doc")
+		_, err := client.ExtractText(context.Background(), [][]byte{[]byte("fake image data")}, "image/png", "test_doc")
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -120,7 +120,7 @@ func TestExtractText(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.ExtractText(context.Background(), []byte("fake image data"), "image/png", "test_doc")
+		_, err := client.ExtractText(context.Background(), [][]byte{[]byte("fake image data")}, "image/png", "test_doc")
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}

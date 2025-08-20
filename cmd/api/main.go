@@ -61,8 +61,8 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Max file size: 10MB per file
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
+	// Max file size: 100MB for all files in a single request
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
 		http.Error(w, "Could not parse multipart form", http.StatusBadRequest)
 		return
 	}
