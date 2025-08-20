@@ -1,9 +1,34 @@
 documents:
   driver_license:
     prompt: |
-      Please analyze the provided front and back images of a Japanese driver's license (運転免許証). The back side of the license may contain the most recent information, such as a new address. Please prioritize information from the back side if there are discrepancies.
-      Extract the following fields and return the result in a single, minified JSON object.
-      If a field is not present, use an empty string "" as its value.
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided images of a Japanese driver's license (運転免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one or two images, labeled "front" and "back".
+      2.  The back side may contain updated information (like a new address). If information appears on both sides (e.g., address), prioritize the information from the back side.
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+
+      **JSON Structure**:
+      {
+        "name": "氏名",
+        "address": "住所",
+        "birth_date": "生年月日",
+        "issue_date": "交付日",
+        "expiry_date": "有効期限",
+        "card_number": "免許の番号"
+      }
+
+      **Example**:
+      {
+        "name": "見本太郎",
+        "address": "東京都千代田区霞が関2-1-1",
+        "birth_date": "昭和60年1月1日",
+        "issue_date": "平成25年4月1日",
+        "expiry_date": "平成30年2月1日",
+        "card_number": "第123456789012号"
+      }
     json_structure:
       name: "氏名"
       address: "住所"
@@ -16,9 +41,35 @@ documents:
       - back
   individual_number_card:
     prompt: |
-      Please analyze the provided image of the front of a Japanese Individual Number Card (マイナンバーカード).
-      Extract the following fields and return the result in a single, minified JSON object.
-      If a field is not present, use an empty string "" as its value.
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of the front of a Japanese Individual Number Card (マイナンバーカード) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given an image labeled "front".
+      2.  Extract the fields listed in the "JSON Structure" section below.
+      3.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+
+      **JSON Structure**:
+      {
+        "name": "氏名",
+        "address": "住所",
+        "birth_date": "生年月日",
+        "issue_date": "交付日",
+        "expiry_date": "有効期限",
+        "card_number": "マイナンバー",
+        "gender": "性別"
+      }
+
+      **Example**:
+      {
+        "name": "見本太郎",
+        "address": "東京都千代田区紀尾井町1-3",
+        "birth_date": "平成1年1月1日",
+        "issue_date": "2016年1月1日",
+        "expiry_date": "2026年1月1日",
+        "card_number": "123456789012",
+        "gender": "男性"
+      }
     json_structure:
       name: "氏名"
       address: "住所"
