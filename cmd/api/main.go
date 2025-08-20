@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/y-mitsuyoshi/kensho/internal/configs"
 	"github.com/y-mitsuyoshi/kensho/internal/ocr"
@@ -64,16 +65,10 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 	// Limit request body to 100MB to avoid OOM
 	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
 
-	// We'll extract document_type from multipart parts to avoid pre-parsing the body
 	var docType string
+	imageDatas := make(map[string][]byte)
+	var mimeType string // Assuming single mime type for all parts.
 
-	// document type is validated by ocr client later
-
-	// Collect all uploaded files with field name "image"
-	var imageDatas [][]byte
-	var mimeType string
-
-	// Use MultipartReader to support multiple files with same field name
 	mr, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "Could not parse multipart data", http.StatusBadRequest)
@@ -89,38 +84,61 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error reading multipart data", http.StatusBadRequest)
 			return
 		}
-		// Handle document_type field in multipart parts
-		if part.FormName() == "document_type" {
-			b, _ := io.ReadAll(part)
+
+		formName := part.FormName()
+		if formName == "document_type" {
+			b, err := io.ReadAll(part)
 			part.Close()
+			if err != nil {
+				http.Error(w, "Could not read document_type", http.StatusInternalServerError)
+				return
+			}
 			docType = string(b)
 			continue
 		}
-		if part.FormName() != "image" {
-			// skip other non-image parts
+
+		if strings.HasPrefix(formName, "image_") {
+			if mimeType == "" {
+				mimeType = part.Header.Get("Content-Type")
+			}
+			b, err := io.ReadAll(part)
+			part.Close()
+			if err != nil {
+				http.Error(w, "Could not read file", http.StatusInternalServerError)
+				return
+			}
+			if len(b) > 0 {
+				key := strings.TrimPrefix(formName, "image_")
+				imageDatas[key] = b
+			}
 			continue
 		}
-		if mimeType == "" {
-			mimeType = part.Header.Get("Content-Type")
-		}
-		b, err := io.ReadAll(part)
-		part.Close()
-		if err != nil {
-			http.Error(w, "Could not read file", http.StatusInternalServerError)
-			return
-		}
-		if len(b) > 0 {
-			imageDatas = append(imageDatas, b)
-		}
-	}
 
-	if len(imageDatas) == 0 {
-		http.Error(w, "at least one image is required", http.StatusBadRequest)
-		return
+		// Close part if it's not used
+		part.Close()
 	}
 
 	if docType == "" {
 		http.Error(w, "document_type is required", http.StatusBadRequest)
+		return
+	}
+
+	doc, ok := config.Documents[docType]
+	if !ok {
+		// This validation is also done in the ocr client, but it's better to fail early.
+		http.Error(w, fmt.Sprintf("unsupported document type: %s", docType), http.StatusBadRequest)
+		return
+	}
+
+	// Validate that all required image parts are present
+	for _, partName := range doc.ImageParts {
+		if _, ok := imageDatas[partName]; !ok {
+			http.Error(w, fmt.Sprintf("missing required image part: image_%s", partName), http.StatusBadRequest)
+			return
+		}
+	}
+	if len(imageDatas) == 0 {
+		http.Error(w, "at least one image is required", http.StatusBadRequest)
 		return
 	}
 
