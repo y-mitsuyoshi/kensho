@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
@@ -60,6 +61,17 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, 
 		genai.Text(doc.Prompt),
 	}
 
+	// Normalize mimeType: strip parameters and handle accidental duplicate prefixes like "image/image/jpeg"
+	mimeType = strings.TrimSpace(mimeType)
+	if idx := strings.Index(mimeType, ";"); idx != -1 {
+		mimeType = strings.TrimSpace(mimeType[:idx])
+	}
+	if strings.Count(mimeType, "image/") > 1 {
+		if last := strings.LastIndex(mimeType, "image/"); last != -1 {
+			mimeType = mimeType[last:]
+		}
+	}
+
 	// Add labeled images to the prompt in the order specified by the config
 	for _, partName := range doc.ImageParts {
 		imageData, ok := imageDatas[partName]
@@ -67,9 +79,19 @@ func (c *Client) ExtractText(ctx context.Context, imageDatas map[string][]byte, 
 			// This should have been caught by the handler, but as a safeguard:
 			return "", fmt.Errorf("missing image data for part: %s", partName)
 		}
+
+		// If mimeType is empty or doesn't start with image/, try to detect from bytes
+		effectiveMime := mimeType
+		if effectiveMime == "" || !strings.HasPrefix(effectiveMime, "image/") {
+			detected := http.DetectContentType(imageData)
+			if strings.HasPrefix(detected, "image/") {
+				effectiveMime = detected
+			}
+		}
+
 		// Add a text part to label the image
 		prompt = append(prompt, genai.Text(fmt.Sprintf("\nImage part: %s", partName)))
-		prompt = append(prompt, genai.ImageData(mimeType, imageData))
+		prompt = append(prompt, genai.ImageData(effectiveMime, imageData))
 	}
 
 	resp, err := c.genaiClient.GenerateContent(ctx, prompt...)
