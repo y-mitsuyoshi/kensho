@@ -11,8 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/y-mitsuyoshi/kensho/internal/configs"
-	"github.com/y-mitsuyoshi/kensho/internal/ocr"
+	"github.com/y-mitsuyoshi/kensho/kensho"
 )
 
 type Health struct {
@@ -20,19 +19,15 @@ type Health struct {
 }
 
 var (
-	ocrClient *ocr.Client
-	config    *configs.Config
+	kenshoClient *kensho.Client
 )
 
 func main() {
 	ctx := context.Background()
 	var err error
-	config, err = configs.LoadConfig("configs/document_types.yml")
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	configPath := "configs/document_types.yml"
 
-	ocrClient, err = ocr.NewClient(ctx, os.Getenv("GEMINI_API_KEY"), config)
+	kenshoClient, err = kensho.NewClient(ctx, os.Getenv("GEMINI_API_KEY"), configPath)
 	if err != nil {
 		log.Fatalf("Failed to create OCR client: %v", err)
 	}
@@ -66,7 +61,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
 
 	var docType string
-	fileParts := make(map[string]ocr.FilePart)
+	fileParts := make(map[string]kensho.FilePart)
 
 	mr, err := r.MultipartReader()
 	if err != nil {
@@ -106,7 +101,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if len(b) > 0 {
 				key := strings.TrimPrefix(formName, "image_")
-				fileParts[key] = ocr.FilePart{Content: b, MimeType: mimeType}
+				fileParts[key] = kensho.FilePart{Content: b, MimeType: mimeType}
 			}
 			continue
 		}
@@ -120,28 +115,14 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, ok := config.Documents[docType]
-	if !ok {
-		// This validation is also done in the ocr client, but it's better to fail early.
-		http.Error(w, fmt.Sprintf("unsupported document type: %s", docType), http.StatusBadRequest)
-		return
-	}
-
-	// Validate that all required image parts are present
-	for _, partName := range doc.ImageParts {
-		if _, ok := fileParts[partName]; !ok {
-			http.Error(w, fmt.Sprintf("missing required image part: image_%s", partName), http.StatusBadRequest)
-			return
-		}
-	}
 	if len(fileParts) == 0 {
 		http.Error(w, "at least one image is required", http.StatusBadRequest)
 		return
 	}
 
-	jsonString, err := ocrClient.ExtractText(r.Context(), fileParts, docType)
+	jsonString, err := kenshoClient.ExtractText(r.Context(), fileParts, docType)
 	if err != nil {
-		if errors.Is(err, ocr.ErrUnsupportedDocumentType) || errors.Is(err, ocr.ErrUnsupportedMimeType) {
+		if errors.Is(err, kensho.ErrUnsupportedDocumentType) || errors.Is(err, kensho.ErrUnsupportedMimeType) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
