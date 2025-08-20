@@ -29,6 +29,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /app
 
 COPY --from=builder /kensho/server /app/server
+# Copy configuration files required at runtime
+COPY --from=builder /src/configs /app/configs
 
 EXPOSE 8080
 
