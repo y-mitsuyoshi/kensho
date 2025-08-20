@@ -20,10 +20,10 @@ var ErrUnsupportedDocumentType = errors.New("unsupported document type")
 var ErrUnsupportedMimeType = errors.New("unsupported MIME type")
 
 var supportedMimeTypes = map[string]bool{
-	"image/jpeg":        true,
-	"image/png":         true,
-	"image/webp":        true,
-	"application/pdf":   true,
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+	"application/pdf": true,
 }
 
 // GenerativeModel is an interface that abstracts the genai.GenerativeModel.
@@ -86,6 +86,12 @@ func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart,
 		mimeType := strings.TrimSpace(part.MimeType)
 		if idx := strings.Index(mimeType, ";"); idx != -1 {
 			mimeType = strings.TrimSpace(mimeType[:idx])
+		}
+		// Handle duplicate "image/" prefix like "image/image/jpeg"
+		if strings.Count(mimeType, "image/") > 1 {
+			if last := strings.LastIndex(mimeType, "image/"); last != -1 {
+				mimeType = mimeType[last:]
+			}
 		}
 
 		// Validate MIME type
