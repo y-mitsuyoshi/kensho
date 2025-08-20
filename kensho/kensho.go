@@ -2,8 +2,10 @@ package kensho
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -17,6 +19,12 @@ var ErrUnsupportedDocumentType = errors.New("unsupported document type")
 
 // ErrUnsupportedMimeType is returned when the MIME type of a file is not supported.
 var ErrUnsupportedMimeType = errors.New("unsupported MIME type")
+
+// ErrRequestBodyTooLarge is returned when the request body is larger than the allowed limit.
+var ErrRequestBodyTooLarge = errors.New("request body too large")
+
+// ErrMissingField is returned when a required field is missing from the request.
+var ErrMissingField = errors.New("missing required field")
 
 var supportedMimeTypes = map[string]bool{
 	"image/jpeg":      true,
@@ -87,11 +95,70 @@ type FilePart struct {
 	MimeType string
 }
 
-// ExtractText sends one or more files (images or PDFs) to the Gemini API and asks it to extract information.
-func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart, docType string) (string, error) {
+// ParseRequest parses a multipart HTTP request to extract the document type and file parts.
+// It enforces a request body size limit of 100MB.
+func ParseRequest(r *http.Request) (string, map[string]FilePart, error) {
+	if r.Method != http.MethodPost {
+		return "", nil, fmt.Errorf("invalid request method: %s", r.Method)
+	}
+
+	// Limit request body to 100MB to avoid OOM
+	r.Body = http.MaxBytesReader(nil, r.Body, 100<<20)
+	if err := r.ParseMultipartForm(100 << 20); err != nil {
+		if err == http.ErrBodyReadAfterClose || err.Error() == "http: request body too large" {
+			return "", nil, ErrRequestBodyTooLarge
+		}
+		return "", nil, fmt.Errorf("could not parse multipart form: %w", err)
+	}
+
+	docType := r.FormValue("document_type")
+	if docType == "" {
+		return "", nil, fmt.Errorf("%w: document_type", ErrMissingField)
+	}
+
+	fileParts := make(map[string]FilePart)
+	for name, headers := range r.MultipartForm.File {
+		if !strings.HasPrefix(name, "image_") {
+			continue
+		}
+		if len(headers) == 0 {
+			continue
+		}
+		header := headers[0]
+
+		file, err := header.Open()
+		if err != nil {
+			return "", nil, fmt.Errorf("could not open file part %s: %w", name, err)
+		}
+		defer file.Close()
+
+		content, err := io.ReadAll(file)
+		if err != nil {
+			return "", nil, fmt.Errorf("could not read file part %s: %w", name, err)
+		}
+
+		if len(content) > 0 {
+			key := strings.TrimPrefix(name, "image_")
+			fileParts[key] = FilePart{
+				Content:  content,
+				MimeType: header.Header.Get("Content-Type"),
+			}
+		}
+	}
+
+	if len(fileParts) == 0 {
+		return "", nil, fmt.Errorf("%w: at least one image is required", ErrMissingField)
+	}
+
+	return docType, fileParts, nil
+}
+
+// Extract sends one or more files to the Gemini API, asks it to extract information,
+// and returns the result as a map.
+func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, docType string) (map[string]interface{}, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
-		return "", fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
 	}
 
 	prompt := []genai.Part{
@@ -101,67 +168,70 @@ func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart,
 	for _, partName := range doc.ImageParts {
 		part, ok := fileParts[partName]
 		if !ok {
-			return "", fmt.Errorf("missing file data for part: %s", partName)
+			// This allows for optional parts, like the back of a driver's license
+			continue
 		}
 
-		// Clean up MIME type
-		mimeType := strings.TrimSpace(part.MimeType)
-		if idx := strings.Index(mimeType, ";"); idx != -1 {
-			mimeType = strings.TrimSpace(mimeType[:idx])
-		}
-		// Handle duplicate "image/" prefix like "image/image/jpeg"
-		if strings.Count(mimeType, "image/") > 1 {
-			if last := strings.LastIndex(mimeType, "image/"); last != -1 {
-				mimeType = mimeType[last:]
-			}
-		}
-
-		// Validate MIME type
+		mimeType := cleanMimeType(part.MimeType)
 		if !supportedMimeTypes[mimeType] {
-			// If not supported, try to detect from content
 			detectedMimeType := http.DetectContentType(part.Content)
 			if !supportedMimeTypes[detectedMimeType] {
-				return "", fmt.Errorf("%w: %s", ErrUnsupportedMimeType, mimeType)
+				return nil, fmt.Errorf("%w: %s", ErrUnsupportedMimeType, mimeType)
 			}
 			mimeType = detectedMimeType
 		}
 
-		// Preprocess the image if it's not a PDF
-		var processedContent []byte
-		if !strings.Contains(mimeType, "pdf") {
-			var err error
-			processedContent, err = PreprocessImage(part.Content, mimeType)
-			if err != nil {
-				// If preprocessing fails, log it and use the original content
-				log.Printf("could not preprocess image part %s: %v", partName, err)
-				processedContent = part.Content
-			}
-		} else {
+		processedContent, err := c.preprocessContent(part.Content, mimeType)
+		if err != nil {
+			log.Printf("could not preprocess image part %s: %v, using original", partName, err)
 			processedContent = part.Content
 		}
 
-		// Add a text part to label the file, then the file data itself.
 		prompt = append(prompt, genai.Text(fmt.Sprintf("\nFile part: %s", partName)))
 		prompt = append(prompt, genai.Blob{MIMEType: mimeType, Data: processedContent})
 	}
 
 	resp, err := c.generativeModel.GenerateContent(ctx, prompt...)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate content: %w", err)
+		return nil, fmt.Errorf("failed to generate content: %w", err)
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("no content generated")
+		return nil, fmt.Errorf("no content generated")
 	}
 
-	// Assuming the first part of the response is the JSON text
-	if jsonText, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
-		raw := string(jsonText)
-		cleaned := sanitizeJSONResponse(raw)
-		return cleaned, nil
+	jsonText, ok := resp.Candidates[0].Content.Parts[0].(genai.Text)
+	if !ok {
+		return nil, fmt.Errorf("unexpected response format from API")
 	}
 
-	return "", fmt.Errorf("unexpected response format from API")
+	cleaned := sanitizeJSONResponse(string(jsonText))
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(cleaned), &data); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON from response: %w (raw response: %s)", err, cleaned)
+	}
+
+	return data, nil
+}
+
+func (c *Client) preprocessContent(content []byte, mimeType string) ([]byte, error) {
+	if strings.Contains(mimeType, "pdf") {
+		return content, nil // PDF preprocessing is not implemented
+	}
+	return PreprocessImage(content, mimeType)
+}
+
+func cleanMimeType(mimeType string) string {
+	mimeType = strings.TrimSpace(mimeType)
+	if idx := strings.Index(mimeType, ";"); idx != -1 {
+		mimeType = strings.TrimSpace(mimeType[:idx])
+	}
+	if strings.Count(mimeType, "image/") > 1 {
+		if last := strings.LastIndex(mimeType, "image/"); last != -1 {
+			mimeType = mimeType[last:]
+		}
+	}
+	return mimeType
 }
 
 // sanitizeJSONResponse attempts to extract a JSON object/array from a string

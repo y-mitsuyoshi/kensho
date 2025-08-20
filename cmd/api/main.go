@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/y-mitsuyoshi/kensho/kensho"
 )
@@ -51,90 +49,27 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Limit request body to 100MB to avoid OOM
-	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
-
-	var docType string
-	fileParts := make(map[string]kensho.FilePart)
-
-	mr, err := r.MultipartReader()
+	docType, fileParts, err := kensho.ParseRequest(r)
 	if err != nil {
-		http.Error(w, "Could not parse multipart data", http.StatusBadRequest)
+		switch {
+		case errors.Is(err, kensho.ErrRequestBodyTooLarge):
+			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+		case errors.Is(err, kensho.ErrMissingField):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(w, fmt.Sprintf("Could not parse request: %v", err), http.StatusBadRequest)
+		}
 		return
 	}
 
-	for {
-		part, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			http.Error(w, "Error reading multipart data", http.StatusBadRequest)
-			return
-		}
-
-		formName := part.FormName()
-		if formName == "document_type" {
-			b, err := io.ReadAll(part)
-			part.Close()
-			if err != nil {
-				http.Error(w, "Could not read document_type", http.StatusInternalServerError)
-				return
-			}
-			docType = string(b)
-			continue
-		}
-
-		if strings.HasPrefix(formName, "image_") {
-			mimeType := part.Header.Get("Content-Type")
-			b, err := io.ReadAll(part)
-			part.Close()
-			if err != nil {
-				http.Error(w, "Could not read file", http.StatusInternalServerError)
-				return
-			}
-			if len(b) > 0 {
-				key := strings.TrimPrefix(formName, "image_")
-				fileParts[key] = kensho.FilePart{Content: b, MimeType: mimeType}
-			}
-			continue
-		}
-
-		// Close part if it's not used
-		part.Close()
-	}
-
-	if docType == "" {
-		http.Error(w, "document_type is required", http.StatusBadRequest)
-		return
-	}
-
-	if len(fileParts) == 0 {
-		http.Error(w, "at least one image is required", http.StatusBadRequest)
-		return
-	}
-
-	jsonString, err := kenshoClient.ExtractText(r.Context(), fileParts, docType)
+	data, err := kenshoClient.Extract(r.Context(), fileParts, docType)
 	if err != nil {
 		if errors.Is(err, kensho.ErrUnsupportedDocumentType) || errors.Is(err, kensho.ErrUnsupportedMimeType) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		log.Printf("Error from OCR client: %v", err)
-		http.Error(w, fmt.Sprintf("Failed to extract text: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Validate that the string from Gemini is valid JSON
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
-		log.Printf("Error unmarshalling JSON from Gemini: %v. Raw response: %s", err, jsonString)
-		http.Error(w, "Failed to parse OCR response", http.StatusInternalServerError)
+		log.Printf("Error from kensho client: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to extract data: %v", err), http.StatusInternalServerError)
 		return
 	}
 

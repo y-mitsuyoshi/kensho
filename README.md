@@ -44,6 +44,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -81,13 +82,19 @@ func main() {
 	docType := "driver_license" // or "individual_number_card"
 
 	// Call the extraction method
-	jsonString, err := client.ExtractText(ctx, fileParts, docType)
+	data, err := client.Extract(ctx, fileParts, docType)
 	if err != nil {
-		log.Fatalf("Failed to extract text: %v", err)
+		log.Fatalf("Failed to extract data: %v", err)
 	}
 
-	// The result is a clean JSON string
-	fmt.Println(jsonString)
+	// The result is a map[string]interface{}
+	// You can easily marshal it to a JSON string for display
+	prettyJSON, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed to marshal JSON: %v", err)
+	}
+
+	fmt.Println(string(prettyJSON))
 }
 ```
 
