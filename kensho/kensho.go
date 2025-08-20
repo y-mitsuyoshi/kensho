@@ -108,9 +108,23 @@ func (c *Client) ExtractText(ctx context.Context, fileParts map[string]FilePart,
 			mimeType = detectedMimeType
 		}
 
+		// Preprocess the image if it's not a PDF
+		var processedContent []byte
+		if !strings.Contains(mimeType, "pdf") {
+			var err error
+			processedContent, err = PreprocessImage(part.Content, mimeType)
+			if err != nil {
+				// If preprocessing fails, log it and use the original content
+				log.Printf("could not preprocess image part %s: %v", partName, err)
+				processedContent = part.Content
+			}
+		} else {
+			processedContent = part.Content
+		}
+
 		// Add a text part to label the file, then the file data itself.
 		prompt = append(prompt, genai.Text(fmt.Sprintf("\nFile part: %s", partName)))
-		prompt = append(prompt, genai.Blob{MIMEType: mimeType, Data: part.Content})
+		prompt = append(prompt, genai.Blob{MIMEType: mimeType, Data: processedContent})
 	}
 
 	resp, err := c.genaiClient.GenerateContent(ctx, prompt...)
