@@ -1,8 +1,11 @@
 package kensho
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/png"
 	"os"
 	"testing"
 
@@ -50,6 +53,49 @@ documents:
 		_, err := NewClient(context.Background(), "fake-api-key", configFile.Name())
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestPreprocessImage(t *testing.T) {
+	// Create a simple 10x10 black PNG image for testing
+	img := image.NewGray(image.Rect(0, 0, 10, 10))
+	for i := range img.Pix {
+		img.Pix[i] = 0 // Black
+	}
+	buf := new(bytes.Buffer)
+	if err := png.Encode(buf, img); err != nil {
+		t.Fatalf("failed to create test image: %v", err)
+	}
+	originalData := buf.Bytes()
+
+	t.Run("should preprocess PNG image without error", func(t *testing.T) {
+		processedData, err := PreprocessImage(originalData, "image/png")
+		if err != nil {
+			t.Errorf("unexpected error during preprocessing: %v", err)
+		}
+
+		// Check that the data has been modified
+		if bytes.Equal(originalData, processedData) {
+			t.Error("image data was not modified by preprocessing")
+		}
+
+		// Check that the output is still a valid image
+		_, _, err = image.Decode(bytes.NewReader(processedData))
+		if err != nil {
+			t.Errorf("processed data is not a valid image: %v", err)
+		}
+	})
+
+	t.Run("should handle non-image data gracefully", func(t *testing.T) {
+		nonImageData := []byte("this is not an image")
+		processedData, err := PreprocessImage(nonImageData, "text/plain")
+
+		if err != nil {
+			t.Errorf("expected nil error for non-image data, but got %v", err)
+		}
+		if !bytes.Equal(nonImageData, processedData) {
+			t.Error("non-image data should be returned unmodified")
 		}
 	})
 }
