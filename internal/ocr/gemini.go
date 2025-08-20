@@ -37,7 +37,7 @@ func NewClient(ctx context.Context, apiKey string, config *configs.Config) (*Cli
 		return nil, fmt.Errorf("failed to create genai client: %w", err)
 	}
 
-	model := client.GenerativeModel("gemini-1.5-pro")
+	model := client.GenerativeModel("gemini-2.5-pro")
 	return &Client{genaiClient: model, config: config}, nil
 }
 
