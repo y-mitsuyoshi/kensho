@@ -44,6 +44,53 @@ documents:
     image_parts:
       - front
       - back
+  special_permanent_resident_certificate:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Special Permanent Resident Certificate (特別永住者証明書) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one or two images, labeled "front" and "back".
+      2.  The back side may contain updated information (like a new address). If information appears on both sides, prioritize the information from the back side.
+      3.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      4.  Extract the fields listed in the "JSON Structure" section below.
+      5.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      6.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation).
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "sex": { "value": "性別", "confidence_score": "0.0-1.0" },
+        "nationality_region": { "value": "国籍・地域", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住居地", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期間の満了日", "confidence_score": "0.0-1.0" },
+        "card_number": { "value": "証明書番号", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+
+      **Example**:
+      {
+        "name": { "value": "金永住", "confidence_score": 0.95 },
+        "birth_date": { "value": "1980年1月1日", "confidence_score": 0.99 },
+        "sex": { "value": "男", "confidence_score": 0.99 },
+        "nationality_region": { "value": "韓国", "confidence_score": 0.98 },
+        "address": { "value": "大阪府大阪市中央区大手前２丁目１－２２", "confidence_score": 0.92 },
+        "expiry_date": { "value": "2030年1月1日", "confidence_score": 0.97 },
+        "card_number": { "value": "1234567", "confidence_score": 0.85 },
+        "forgery_warning": { "has_signs_of_forgery": false, "reason": "No obvious signs of forgery detected." }
+      }
+    json_structure:
+      name: "氏名"
+      birth_date: "生年月日"
+      sex: "性別"
+      nationality_region: "国籍・地域"
+      address: "住居地"
+      expiry_date: "有効期間の満了日"
+      card_number: "証明書番号"
+    image_parts:
+      - front
+      - back
   individual_number_card:
     prompt: |
       **Role**: You are an expert AI OCR assistant.
@@ -89,3 +136,161 @@ documents:
       gender: "性別"
     image_parts:
       - front
+  passport:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese passport (日本国旅券) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image of the main data page.
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation).
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "passport_number": { "value": "旅券番号", "confidence_score": "0.0-1.0" },
+        "nationality": { "value": "国籍", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "sex": { "value": "性別", "confidence_score": "0.0-1.0" },
+        "registered_domicile": { "value": "本籍地", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "発行年月日", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期間満了日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行官庁", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+
+      **Example**:
+      {
+        "name": { "value": "山田太郎", "confidence_score": 0.95 },
+        "passport_number": { "value": "XY1234567", "confidence_score": 0.92 },
+        "nationality": { "value": "JAPAN", "confidence_score": 0.99 },
+        "birth_date": { "value": "1990年1月1日", "confidence_score": 0.99 },
+        "sex": { "value": "M", "confidence_score": 0.99 },
+        "registered_domicile": { "value": "TOKYO", "confidence_score": 0.91 },
+        "issue_date": { "value": "2020年1月1日", "confidence_score": 0.98 },
+        "expiry_date": { "value": "2030年1月1日", "confidence_score": 0.97 },
+        "issuing_authority": { "value": "MINISTRY OF FOREIGN AFFAIRS", "confidence_score": 0.89 },
+        "forgery_warning": { "has_signs_of_forgery": false, "reason": "No obvious signs of forgery detected." }
+      }
+    json_structure:
+      name: "氏名"
+      passport_number: "旅券番号"
+      nationality: "国籍"
+      birth_date: "生年月日"
+      sex: "性別"
+      registered_domicile: "本籍地"
+      issue_date: "発行年月日"
+      expiry_date: "有効期間満了日"
+      issuing_authority: "発行官庁"
+    image_parts:
+      - front
+  health_insurance_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Health Insurance Card (健康保険証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image of the card.
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation).
+
+      **JSON Structure**:
+      {
+        "symbol": { "value": "記号", "confidence_score": "0.0-1.0" },
+        "number": { "value": "番号", "confidence_score": "0.0-1.0" },
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住所", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "insurer_name": { "value": "保険者名称", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+
+      **Example**:
+      {
+        "symbol": { "value": "東", "confidence_score": 0.95 },
+        "number": { "value": "12345", "confidence_score": 0.92 },
+        "name": { "value": "鈴木一朗", "confidence_score": 0.99 },
+        "birth_date": { "value": "昭和50年4月1日", "confidence_score": 0.99 },
+        "address": { "value": "東京都新宿区西新宿2-8-1", "confidence_score": 0.91 },
+        "issue_date": { "value": "平成28年10月1日", "confidence_score": 0.98 },
+        "insurer_name": { "value": "全国健康保険協会東京支部", "confidence_score": 0.89 },
+        "forgery_warning": { "has_signs_of_forgery": false, "reason": "No obvious signs of forgery detected." }
+      }
+    json_structure:
+      symbol: "記号"
+      number: "番号"
+      name: "氏名"
+      birth_date: "生年月日"
+      address: "住所"
+      issue_date: "交付年月日"
+      insurer_name: "保険者名称"
+    image_parts:
+      - front
+  residence_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Residence Card (在留カード) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one or two images, labeled "front" and "back".
+      2.  The back side may contain updated information (like a new address). If information appears on both sides, prioritize the information from the back side.
+      3.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      4.  Extract the fields listed in the "JSON Structure" section below.
+      5.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      6.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation).
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "sex": { "value": "性別", "confidence_score": "0.0-1.0" },
+        "nationality_region": { "value": "国籍・地域", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住居地", "confidence_score": "0.0-1.0" },
+        "status_of_residence": { "value": "在留資格", "confidence_score": "0.0-1.0" },
+        "period_of_stay": { "value": "在留期間", "confidence_score": "0.0-1.0" },
+        "period_of_stay_expiry_date": { "value": "在留期間の満了日", "confidence_score": "0.0-1.0" },
+        "card_number": { "value": "在留カードの番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期間の満了日", "confidence_score": "0.0-1.0" },
+        "work_restrictions": { "value": "就労制限の有無", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+
+      **Example**:
+      {
+        "name": { "value": "SAMPLE TARO", "confidence_score": 0.95 },
+        "birth_date": { "value": "1985年1月1日", "confidence_score": 0.99 },
+        "sex": { "value": "男", "confidence_score": 0.99 },
+        "nationality_region": { "value": "韓国", "confidence_score": 0.98 },
+        "address": { "value": "東京都千代田区霞が関１－１－１", "confidence_score": 0.92 },
+        "status_of_residence": { "value": "技術・人文知識・国際業務", "confidence_score": 0.9 },
+        "period_of_stay": { "value": "5年", "confidence_score": 0.99 },
+        "period_of_stay_expiry_date": { "value": "2028年1月1日", "confidence_score": 0.97 },
+        "card_number": { "value": "AB12345678CD", "confidence_score": 0.85 },
+        "issue_date": { "value": "2023年1月1日", "confidence_score": 0.98 },
+        "expiry_date": { "value": "2028年1月1日", "confidence_score": 0.97 },
+        "work_restrictions": { "value": "就労不可", "confidence_score": 0.96 },
+        "forgery_warning": { "has_signs_of_forgery": false, "reason": "No obvious signs of forgery detected." }
+      }
+    json_structure:
+      name: "氏名"
+      birth_date: "生年月日"
+      sex: "性別"
+      nationality_region: "国籍・地域"
+      address: "住居地"
+      status_of_residence: "在留資格"
+      period_of_stay: "在留期間"
+      period_of_stay_expiry_date: "在留期間の満了日"
+      card_number: "在留カードの番号"
+      issue_date: "交付年月日"
+      expiry_date: "有効期間の満了日"
+      work_restrictions: "就労制限の有無"
+    image_parts:
+      - front
+      - back
