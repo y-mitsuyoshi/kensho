@@ -146,11 +146,13 @@ make logs
 - サーバーは`image/png`、`image/jpeg`、`image/webp`をサポートしています。
 - 運転免許証（`driver_license`）の場合、`image_front`と`image_back`を送信できます。
 - マイナンバーカード（`individual_number_card`）の場合、`image_front`を送信します。
+- `preprocess=true` を追加すると、画像の前処理（傾き補正、ノイズ除去など）が有効になります。デフォルトは `false` です。
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/extract \
   -F "document_type=driver_license" \
-  -F "image_front=@/path/to/your/image.png"
+  -F "image_front=@/path/to/your/image.png" \
+  -F "preprocess=true"
 ```
 
 リクエストが成功すると、次のようなJSONレスポンスが返されます。

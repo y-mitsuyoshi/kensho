@@ -49,7 +49,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractHandler(w http.ResponseWriter, r *http.Request) {
-	docType, fileParts, masking, err := kensho.ParseRequest(r)
+	docType, fileParts, masking, preprocess, err := kensho.ParseRequest(r)
 	if err != nil {
 		switch {
 		case errors.Is(err, kensho.ErrRequestBodyTooLarge):
@@ -62,7 +62,7 @@ func extractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := kenshoClient.Extract(r.Context(), fileParts, docType, masking)
+	result, err := kenshoClient.Extract(r.Context(), fileParts, docType, masking, preprocess)
 	if err != nil {
 		if errors.Is(err, kensho.ErrUnsupportedDocumentType) || errors.Is(err, kensho.ErrUnsupportedMimeType) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

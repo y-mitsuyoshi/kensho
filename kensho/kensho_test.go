@@ -163,7 +163,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -190,7 +190,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err == nil {
 			t.Error("expected an error for invalid JSON, but got nil")
 		}
@@ -204,7 +204,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", true)
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", true, false)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -224,7 +224,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -253,7 +253,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), pdfParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), pdfParts, "test_doc", false, false)
 		if err != nil {
 			t.Errorf("unexpected error for PDF: %v", err)
 		}
@@ -263,14 +263,14 @@ func TestExtract(t *testing.T) {
 		unsupportedParts := map[string]FilePart{
 			"front": {Content: []byte("fake data"), MimeType: "application/zip"},
 		}
-		_, err := client.Extract(context.Background(), unsupportedParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), unsupportedParts, "test_doc", false, false)
 		if !errors.Is(err, ErrUnsupportedMimeType) {
 			t.Errorf("expected error %v, but got %v", ErrUnsupportedMimeType, err)
 		}
 	})
 
 	t.Run("should return error when doc type is not supported", func(t *testing.T) {
-		_, err := client.Extract(context.Background(), mockFileParts, "unsupported_doc", false)
+		_, err := client.Extract(context.Background(), mockFileParts, "unsupported_doc", false, false)
 		if !errors.Is(err, ErrUnsupportedDocumentType) {
 			t.Errorf("expected error %v, but got %v", ErrUnsupportedDocumentType, err)
 		}
@@ -281,7 +281,7 @@ func TestExtract(t *testing.T) {
 			return nil, errors.New("api error")
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -294,7 +294,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -315,7 +315,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false, false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
