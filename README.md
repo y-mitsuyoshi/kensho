@@ -18,7 +18,7 @@
 ## 💻 技術スタック
 
 - **言語**: Go
-- **AIモデル**: Google Gemini 2.5 Pro
+- **AIモデル**: Google Gemini 2.5 Pro (デフォルト), Gemini 2.5 Flash など
 - **主要ライブラリ**: [Google AI Go SDK](https://github.com/google/generative-ai-go)
 
 ## 🚀 インストール
@@ -39,6 +39,12 @@ Kenshoクライアントの基本的な使い方です。
 export GEMINI_API_KEY="YOUR_API_KEY_HERE"
 ```
 
+オプションで、使用するモデルを指定することもできます。デフォルトは `gemini-2.5-pro` です。
+
+```bash
+export GEMINI_MODEL="gemini-2.5-flash"
+```
+
 その後、Goアプリケーションでクライアントを使用します。
 
 ```go
@@ -57,9 +63,10 @@ import (
 func main() {
 	ctx := context.Background()
 	apiKey := os.Getenv("GEMINI_API_KEY")
+	modelName := os.Getenv("GEMINI_MODEL") // 環境変数からモデル名を取得
 
 	// デフォルトの埋め込み設定で新しいクライアントを作成
-	client, err := kensho.NewClient(ctx, apiKey)
+	client, err := kensho.NewClient(ctx, apiKey, modelName)
 	if err != nil {
 		log.Fatalf("Failed to create kensho client: %v", err)
 	}
@@ -172,12 +179,13 @@ defer client.Close()
 cp .env.example .env
 ```
 
-次に、`.env`を開き、`GEMINI_API_KEY`を追加します。
+次に、`.env`を開き、`GEMINI_API_KEY`を追加します。`GEMINI_MODEL`はオプションで、指定しない場合は`gemini-2.5-pro`が使用されます。
 
 ```dotenv
 # .env
 PORT=8080
 GEMINI_API_KEY="YOUR_API_KEY_HERE"
+# GEMINI_MODEL="gemini-2.5-flash" # オプション: モデルを変更する場合
 ```
 
 ### 2. サービスを実行する

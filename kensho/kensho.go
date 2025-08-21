@@ -48,25 +48,25 @@ type Client struct {
 }
 
 // NewClient creates a new client for the Gemini API using the default embedded configuration.
-func NewClient(ctx context.Context, apiKey string) (*Client, error) {
+func NewClient(ctx context.Context, apiKey string, modelName string) (*Client, error) {
 	config, err := loadDefaultConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load default config: %w", err)
 	}
-	return NewClientWithConfig(ctx, apiKey, *config)
+	return NewClientWithConfig(ctx, apiKey, modelName, *config)
 }
 
 // NewClientWithConfigPath creates a new client for the Gemini API using a configuration file from the specified path.
-func NewClientWithConfigPath(ctx context.Context, apiKey string, configPath string) (*Client, error) {
+func NewClientWithConfigPath(ctx context.Context, apiKey string, modelName string, configPath string) (*Client, error) {
 	config, err := LoadConfig(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config from path %s: %w", configPath, err)
 	}
-	return NewClientWithConfig(ctx, apiKey, *config)
+	return NewClientWithConfig(ctx, apiKey, modelName, *config)
 }
 
 // NewClientWithConfig creates a new client for the Gemini API with a provided configuration struct.
-func NewClientWithConfig(ctx context.Context, apiKey string, config Config) (*Client, error) {
+func NewClientWithConfig(ctx context.Context, apiKey string, modelName string, config Config) (*Client, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY is not set")
 	}
@@ -76,7 +76,11 @@ func NewClientWithConfig(ctx context.Context, apiKey string, config Config) (*Cl
 		return nil, fmt.Errorf("failed to create genai client: %w", err)
 	}
 
-	model := client.GenerativeModel("gemini-2.5-pro")
+	if modelName == "" {
+		modelName = "gemini-2.5-pro"
+	}
+
+	model := client.GenerativeModel(modelName)
 	return &Client{
 		genaiClient:     client,
 		generativeModel: model,
