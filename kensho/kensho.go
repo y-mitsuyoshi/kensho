@@ -119,26 +119,27 @@ type ExtractionResult struct {
 
 // ParseRequest parses a multipart HTTP request to extract the document type and file parts.
 // It enforces a request body size limit of 100MB.
-func ParseRequest(r *http.Request) (string, map[string]FilePart, bool, error) {
+func ParseRequest(r *http.Request) (string, map[string]FilePart, bool, bool, error) {
 	if r.Method != http.MethodPost {
-		return "", nil, false, fmt.Errorf("invalid request method: %s", r.Method)
+		return "", nil, false, false, fmt.Errorf("invalid request method: %s", r.Method)
 	}
 
 	// Limit request body to 100MB to avoid OOM
 	r.Body = http.MaxBytesReader(nil, r.Body, 100<<20)
 	if err := r.ParseMultipartForm(100 << 20); err != nil {
 		if err == http.ErrBodyReadAfterClose || err.Error() == "http: request body too large" {
-			return "", nil, false, ErrRequestBodyTooLarge
+			return "", nil, false, false, ErrRequestBodyTooLarge
 		}
-		return "", nil, false, fmt.Errorf("could not parse multipart form: %w", err)
+		return "", nil, false, false, fmt.Errorf("could not parse multipart form: %w", err)
 	}
 
 	docType := r.FormValue("document_type")
 	if docType == "" {
-		return "", nil, false, fmt.Errorf("%w: document_type", ErrMissingField)
+		return "", nil, false, false, fmt.Errorf("%w: document_type", ErrMissingField)
 	}
 
 	masking, _ := strconv.ParseBool(r.FormValue("masking"))
+	preprocess, _ := strconv.ParseBool(r.FormValue("preprocess"))
 
 	fileParts := make(map[string]FilePart)
 	for name, headers := range r.MultipartForm.File {
@@ -152,13 +153,13 @@ func ParseRequest(r *http.Request) (string, map[string]FilePart, bool, error) {
 
 		file, err := header.Open()
 		if err != nil {
-			return "", nil, false, fmt.Errorf("could not open file part %s: %w", name, err)
+			return "", nil, false, false, fmt.Errorf("could not open file part %s: %w", name, err)
 		}
 		defer file.Close()
 
 		content, err := io.ReadAll(file)
 		if err != nil {
-			return "", nil, false, fmt.Errorf("could not read file part %s: %w", name, err)
+			return "", nil, false, false, fmt.Errorf("could not read file part %s: %w", name, err)
 		}
 
 		if len(content) > 0 {
@@ -171,10 +172,10 @@ func ParseRequest(r *http.Request) (string, map[string]FilePart, bool, error) {
 	}
 
 	if len(fileParts) == 0 {
-		return "", nil, false, fmt.Errorf("%w: at least one image is required", ErrMissingField)
+		return "", nil, false, false, fmt.Errorf("%w: at least one image is required", ErrMissingField)
 	}
 
-	return docType, fileParts, masking, nil
+	return docType, fileParts, masking, preprocess, nil
 }
 
 // maskString masks a string, showing only the last 4 characters.
@@ -187,7 +188,7 @@ func maskString(s string) string {
 
 // Extract sends one or more files to the Gemini API, asks it to extract information,
 // and returns the result as a map.
-func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, docType string, masking bool) (*ExtractionResult, error) {
+func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, docType string, masking, preprocess bool) (*ExtractionResult, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
@@ -213,7 +214,7 @@ func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, doc
 			mimeType = detectedMimeType
 		}
 
-		processedContent, err := c.preprocessContent(part.Content, mimeType)
+		processedContent, err := c.preprocessContent(part.Content, mimeType, preprocess)
 		if err != nil {
 			log.Printf("could not preprocess image part %s: %v, using original", partName, err)
 			processedContent = part.Content
@@ -319,7 +320,10 @@ func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, doc
 	return result, nil
 }
 
-func (c *Client) preprocessContent(content []byte, mimeType string) ([]byte, error) {
+func (c *Client) preprocessContent(content []byte, mimeType string, preprocess bool) ([]byte, error) {
+	if !preprocess {
+		return content, nil
+	}
 	if strings.Contains(mimeType, "pdf") {
 		return content, nil // PDF preprocessing is not implemented
 	}
