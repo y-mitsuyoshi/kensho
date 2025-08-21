@@ -8,8 +8,10 @@
 ## ✨ 特徴
 
 - **高精度な情報抽出**: Gemini 2.5 Proモデルを活用し、傾きや光の反射がある画像からでも正確に情報を抽出します。
-- **構造化されたJSON出力**: 構造化されたJSONを返すため、他のシステムとの連携が容易です。
-- **日本の本人確認書類に最適化**: 日本の主要な本人確認書類に特化してファインチューニングされています。
+- **構造化されたJSON出力**: 抽出結果は、値、信頼度スコア、バリデーション結果を含む構造化されたJSONで返され、他のシステムと容易に連携できます。
+- **偽造検出機能**: 画像内のフォントの不整合や不自然なテキスト配置などを分析し、書類が偽造されている兆候を警告します。
+- **データバリデーション**: 運転免許証番号やマイナンバーのチェックディジットを検証し、番号の正当性を確認します。
+- **日本の本人確認書類に最適化**: 日本の運転免許証とマイナンバーカードに特化しています。
 - **高度な画像前処理**: 傾き補正、コントラスト調整、ノイズ除去などの画像前処理機能を内蔵し、OCRの精度を向上させます。
 - **シンプルなGo実装**: 標準ライブラリとGoogle AI Go SDKのみで構築されており、軽量かつ高速に動作します。
 
@@ -82,20 +84,80 @@ func main() {
 	docType := "driver_license" // または "individual_number_card"
 
 	// 抽出メソッドを呼び出す
-	data, err := client.Extract(ctx, fileParts, docType)
+	// preprocess: trueにすると画像の前処理が有効になります
+	// masking: trueにすると、カード番号などの機密情報がマスクされます
+	result, err := client.Extract(ctx, fileParts, docType, true, false)
 	if err != nil {
 		log.Fatalf("Failed to extract data: %v", err)
 	}
 
-	// 結果は map[string]interface{}
+	// 結果は *kensho.ExtractionResult 構造体
 	// 表示用にJSON文字列にマーシャリング
-	prettyJSON, err := json.MarshalIndent(data, "", "  ")
+	prettyJSON, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		log.Fatalf("Failed to marshal JSON: %v", err)
 	}
 
 	fmt.Println(string(prettyJSON))
 }
+
+/*
+出力例:
+{
+  "extracted_data": {
+    "address": {
+      "value": "東京都千代田区霞が関2-1-1",
+      "confidence_score": 0.92,
+      "validation": ""
+    },
+    "birth_date": {
+      "value": "昭和60年1月1日",
+      "confidence_score": 0.99,
+      "validation": "valid"
+    },
+    "card_number": {
+      "value": "第123456789012号",
+      "confidence_score": 0.85,
+      "validation": "invalid"
+    },
+    "expiry_date": {
+      "value": "平成30年2月1日",
+      "confidence_score": 0.97,
+      "validation": "valid"
+    },
+    "issue_date": {
+      "value": "平成25年4月1日",
+      "confidence_score": 0.98,
+      "validation": "valid"
+    },
+    "name": {
+      "value": "見本太郎",
+      "confidence_score": 0.95,
+      "validation": ""
+    }
+  },
+  "forgery_warning": {
+    "has_signs_of_forgery": true,
+    "reason": "The font used for the address appears inconsistent with the rest of the document."
+  },
+  "raw_response": "..."
+}
+*/
+```
+
+### カスタム設定の使用
+
+`kensho`は、デフォルトで埋め込まれた`document_types.yml`を使用しますが、独自のYAMLファイルを指定して、プロンプトや対応ドキュメントをカスタマイズすることも可能です。
+
+```go
+// ...
+// カスタム設定ファイルへのパスを指定して新しいクライアントを作成
+client, err := kensho.NewClientWithConfigPath(ctx, apiKey, "/path/to/your/custom_config.yml")
+if err != nil {
+    log.Fatalf("Failed to create kensho client with custom config: %v", err)
+}
+defer client.Close()
+// ...
 ```
 
 ## 🌐 例: Webサービスとして実行する
@@ -147,24 +209,57 @@ make logs
 - 運転免許証（`driver_license`）の場合、`image_front`と`image_back`を送信できます。
 - マイナンバーカード（`individual_number_card`）の場合、`image_front`を送信します。
 - `preprocess=true` を追加すると、画像の前処理（傾き補正、ノイズ除去など）が有効になります。デフォルトは `false` です。
+- `masking=true` を追加すると、カード番号などの機密情報が `************` のようにマスクされます。デフォルトは `false` です。
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/extract \
   -F "document_type=driver_license" \
   -F "image_front=@/path/to/your/image.png" \
-  -F "preprocess=true"
+  -F "preprocess=true" \
+  -F "masking=true"
 ```
 
 リクエストが成功すると、次のようなJSONレスポンスが返されます。
 
 ```json
 {
-  "address": "東京都千代田区霞が関2-1-1",
-  "birth_date": "昭和60年1月1日",
-  "card_number": "第123456789012号",
-  "expiry_date": "平成30年2月1日",
-  "issue_date": "平成25年4月1日",
-  "name": "見本太郎"
+  "extracted_data": {
+    "address": {
+      "value": "東京都千代田区霞が関2-1-1",
+      "confidence_score": 0.92,
+      "validation": ""
+    },
+    "birth_date": {
+      "value": "昭和60年1月1日",
+      "confidence_score": 0.99,
+      "validation": "valid"
+    },
+    "card_number": {
+      "value": "************9012",
+      "confidence_score": 0.85,
+      "validation": "invalid"
+    },
+    "expiry_date": {
+      "value": "平成30年2月1日",
+      "confidence_score": 0.97,
+      "validation": "valid"
+    },
+    "issue_date": {
+      "value": "平成25年4月1日",
+      "confidence_score": 0.98,
+      "validation": "valid"
+    },
+    "name": {
+      "value": "見本太郎",
+      "confidence_score": 0.95,
+      "validation": ""
+    }
+  },
+  "forgery_warning": {
+    "has_signs_of_forgery": false,
+    "reason": "No obvious signs of forgery detected."
+  },
+  "raw_response": "..."
 }
 ```
 
