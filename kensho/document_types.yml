@@ -10,25 +10,28 @@ documents:
       3.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
       4.  Extract the fields listed in the "JSON Structure" section below.
       5.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      6.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation, unusual holograms).
 
       **JSON Structure**:
       {
-        "name": "氏名",
-        "address": "住所",
-        "birth_date": "生年月日",
-        "issue_date": "交付日",
-        "expiry_date": "有効期限",
-        "card_number": "免許の番号"
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住所", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付日", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期限", "confidence_score": "0.0-1.0" },
+        "card_number": { "value": "免許の番号", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
       }
 
       **Example**:
       {
-        "name": "見本太郎",
-        "address": "東京都千代田区霞が関2-1-1",
-        "birth_date": "昭和60年1月1日",
-        "issue_date": "平成25年4月1日",
-        "expiry_date": "平成30年2月1日",
-        "card_number": "第123456789012号"
+        "name": { "value": "見本太郎", "confidence_score": 0.95 },
+        "address": { "value": "東京都千代田区霞が関2-1-1", "confidence_score": 0.92 },
+        "birth_date": { "value": "昭和60年1月1日", "confidence_score": 0.99 },
+        "issue_date": { "value": "平成25年4月1日", "confidence_score": 0.98 },
+        "expiry_date": { "value": "平成30年2月1日", "confidence_score": 0.97 },
+        "card_number": { "value": "第123456789012号", "confidence_score": 0.85 },
+        "forgery_warning": { "has_signs_of_forgery": true, "reason": "The font used for the address appears inconsistent with the rest of the document." }
       }
     json_structure:
       name: "氏名"
@@ -50,27 +53,30 @@ documents:
       2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
       3.  Extract the fields listed in the "JSON Structure" section below.
       4.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation).
 
       **JSON Structure**:
       {
-        "name": "氏名",
-        "address": "住所",
-        "birth_date": "生年月日",
-        "issue_date": "交付日",
-        "expiry_date": "有効期限",
-        "card_number": "マイナンバー",
-        "gender": "性別"
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住所", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付日", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期限", "confidence_score": "0.0-1.0" },
+        "card_number": { "value": "マイナンバー", "confidence_score": "0.0-1.0" },
+        "gender": { "value": "性別", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
       }
 
       **Example**:
       {
-        "name": "見本太郎",
-        "address": "東京都千代田区紀尾井町1-3",
-        "birth_date": "平成1年1月1日",
-        "issue_date": "2016年1月1日",
-        "expiry_date": "2026年1月1日",
-        "card_number": "123456789012",
-        "gender": "男性"
+        "name": { "value": "見本太郎", "confidence_score": 0.95 },
+        "address": { "value": "東京都千代田区紀尾井町1-3", "confidence_score": 0.92 },
+        "birth_date": { "value": "平成1年1月1日", "confidence_score": 0.99 },
+        "issue_date": { "value": "2016年1月1日", "confidence_score": 0.98 },
+        "expiry_date": { "value": "2026年1月1日", "confidence_score": 0.97 },
+        "card_number": { "value": "123456789012", "confidence_score": 0.85 },
+        "gender": { "value": "男性", "confidence_score": 0.99 },
+        "forgery_warning": { "has_signs_of_forgery": false, "reason": "No obvious signs of forgery detected." }
       }
     json_structure:
       name: "氏名"

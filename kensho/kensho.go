@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
+	"github.com/y-mitsuyoshi/kensho/kensho/validation"
 	"google.golang.org/api/option"
 )
 
@@ -95,26 +97,48 @@ type FilePart struct {
 	MimeType string
 }
 
+// Field represents a single extracted field, including its value and confidence score.
+type Field struct {
+	Value           interface{} `json:"value"`
+	ConfidenceScore float64     `json:"confidence_score"`
+	Validation      string      `json:"validation,omitempty"`
+}
+
+// ForgeryWarning contains information about potential document forgery.
+type ForgeryWarning struct {
+	HasSignsOfForgery bool   `json:"has_signs_of_forgery"`
+	Reason            string `json:"reason"`
+}
+
+// ExtractionResult represents the overall result of the extraction process.
+type ExtractionResult struct {
+	ExtractedData  map[string]Field `json:"extracted_data"`
+	ForgeryWarning *ForgeryWarning  `json:"forgery_warning,omitempty"`
+	RawResponse    string           `json:"raw_response,omitempty"`
+}
+
 // ParseRequest parses a multipart HTTP request to extract the document type and file parts.
 // It enforces a request body size limit of 100MB.
-func ParseRequest(r *http.Request) (string, map[string]FilePart, error) {
+func ParseRequest(r *http.Request) (string, map[string]FilePart, bool, error) {
 	if r.Method != http.MethodPost {
-		return "", nil, fmt.Errorf("invalid request method: %s", r.Method)
+		return "", nil, false, fmt.Errorf("invalid request method: %s", r.Method)
 	}
 
 	// Limit request body to 100MB to avoid OOM
 	r.Body = http.MaxBytesReader(nil, r.Body, 100<<20)
 	if err := r.ParseMultipartForm(100 << 20); err != nil {
 		if err == http.ErrBodyReadAfterClose || err.Error() == "http: request body too large" {
-			return "", nil, ErrRequestBodyTooLarge
+			return "", nil, false, ErrRequestBodyTooLarge
 		}
-		return "", nil, fmt.Errorf("could not parse multipart form: %w", err)
+		return "", nil, false, fmt.Errorf("could not parse multipart form: %w", err)
 	}
 
 	docType := r.FormValue("document_type")
 	if docType == "" {
-		return "", nil, fmt.Errorf("%w: document_type", ErrMissingField)
+		return "", nil, false, fmt.Errorf("%w: document_type", ErrMissingField)
 	}
+
+	masking, _ := strconv.ParseBool(r.FormValue("masking"))
 
 	fileParts := make(map[string]FilePart)
 	for name, headers := range r.MultipartForm.File {
@@ -128,13 +152,13 @@ func ParseRequest(r *http.Request) (string, map[string]FilePart, error) {
 
 		file, err := header.Open()
 		if err != nil {
-			return "", nil, fmt.Errorf("could not open file part %s: %w", name, err)
+			return "", nil, false, fmt.Errorf("could not open file part %s: %w", name, err)
 		}
 		defer file.Close()
 
 		content, err := io.ReadAll(file)
 		if err != nil {
-			return "", nil, fmt.Errorf("could not read file part %s: %w", name, err)
+			return "", nil, false, fmt.Errorf("could not read file part %s: %w", name, err)
 		}
 
 		if len(content) > 0 {
@@ -147,15 +171,23 @@ func ParseRequest(r *http.Request) (string, map[string]FilePart, error) {
 	}
 
 	if len(fileParts) == 0 {
-		return "", nil, fmt.Errorf("%w: at least one image is required", ErrMissingField)
+		return "", nil, false, fmt.Errorf("%w: at least one image is required", ErrMissingField)
 	}
 
-	return docType, fileParts, nil
+	return docType, fileParts, masking, nil
+}
+
+// maskString masks a string, showing only the last 4 characters.
+func maskString(s string) string {
+	if len(s) <= 4 {
+		return s
+	}
+	return "************" + s[len(s)-4:]
 }
 
 // Extract sends one or more files to the Gemini API, asks it to extract information,
 // and returns the result as a map.
-func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, docType string) (map[string]interface{}, error) {
+func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, docType string, masking bool) (*ExtractionResult, error) {
 	doc, ok := c.config.Documents[docType]
 	if !ok {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedDocumentType, docType)
@@ -206,12 +238,85 @@ func (c *Client) Extract(ctx context.Context, fileParts map[string]FilePart, doc
 	}
 
 	cleaned := sanitizeJSONResponse(string(jsonText))
-	var data map[string]interface{}
+	var data map[string]Field
 	if err := json.Unmarshal([]byte(cleaned), &data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON from response: %w (raw response: %s)", err, cleaned)
 	}
 
-	return data, nil
+	// Perform validation
+	for key, field := range data {
+		valueStr, ok := field.Value.(string)
+		if !ok {
+			continue // or handle non-string values if necessary
+		}
+
+		validated := false
+		var isValid bool
+
+		switch docType {
+		case "driver_license":
+			if key == "card_number" {
+				isValid = validation.ValidateDriverLicenseNumber(valueStr)
+				validated = true
+			} else if strings.Contains(key, "date") {
+				isValid = validation.ValidateDate(valueStr)
+				validated = true
+			}
+		case "individual_number_card":
+			if key == "card_number" {
+				isValid = validation.ValidateMyNumber(valueStr)
+				validated = true
+			} else if strings.Contains(key, "date") {
+				isValid = validation.ValidateDate(valueStr)
+				validated = true
+			}
+		}
+
+		if validated {
+			if isValid {
+				field.Validation = "valid"
+			} else {
+				field.Validation = "invalid"
+			}
+			data[key] = field
+		}
+	}
+
+	// Extract forgery warning if present
+	var rawData map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(cleaned), &rawData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal raw JSON for forgery check: %w", err)
+	}
+
+	var forgeryWarning *ForgeryWarning
+	if fwRaw, ok := rawData["forgery_warning"]; ok {
+		if err := json.Unmarshal(fwRaw, &forgeryWarning); err == nil {
+			// Successfully unmarshalled, remove it from the main data map
+			delete(rawData, "forgery_warning")
+			// also remove from the `data` map which has the parsed fields
+			delete(data, "forgery_warning")
+		} else {
+			log.Printf("could not unmarshal forgery_warning: %v", err)
+		}
+	}
+
+	// Apply masking if requested
+	if masking {
+		if cardNumberField, ok := data["card_number"]; ok {
+			if valueStr, ok := cardNumberField.Value.(string); ok {
+				cardNumberField.Value = maskString(valueStr)
+				data["card_number"] = cardNumberField
+			}
+		}
+	}
+
+	result := &ExtractionResult{
+		ExtractedData:  data,
+		ForgeryWarning: forgeryWarning,
+		RawResponse:    cleaned,
+	}
+
+	return result, nil
 }
 
 func (c *Client) preprocessContent(content []byte, mimeType string) ([]byte, error) {

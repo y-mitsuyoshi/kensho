@@ -133,8 +133,9 @@ func TestExtract(t *testing.T) {
 			"test_doc": {
 				Prompt: "Extract data from this document.",
 				JSONStructure: map[string]string{
-					"name": "name of the person",
-					"age":  "age of the person",
+					"name":        "name of the person",
+					"age":         "age of the person",
+					"card_number": "card number",
 				},
 				ImageParts: []string{"front"},
 			},
@@ -149,26 +150,30 @@ func TestExtract(t *testing.T) {
 	}
 
 	t.Run("should extract data successfully", func(t *testing.T) {
+		mockResponse := `{"name":{"value":"John Doe","confidence_score":0.9},"age":{"value":30,"confidence_score":0.95}}`
 		mockModel.GenerateContentFunc = func(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error) {
 			return &genai.GenerateContentResponse{
 				Candidates: []*genai.Candidate{
 					{
 						Content: &genai.Content{
-							Parts: []genai.Part{genai.Text("{\"name\":\"John Doe\",\"age\":30}")},
+							Parts: []genai.Part{genai.Text(mockResponse)},
 						},
 					},
 				},
 			}, nil
 		}
 
-		result, err := client.Extract(context.Background(), mockFileParts, "test_doc")
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 
-		expected := map[string]interface{}{"name": "John Doe", "age": float64(30)}
-		if !reflect.DeepEqual(result, expected) {
-			t.Errorf("expected result %v, but got %v", expected, result)
+		expectedData := map[string]Field{
+			"name": {Value: "John Doe", ConfidenceScore: 0.9},
+			"age":  {Value: float64(30), ConfidenceScore: 0.95},
+		}
+		if !reflect.DeepEqual(result.ExtractedData, expectedData) {
+			t.Errorf("expected result %v, but got %v", expectedData, result.ExtractedData)
 		}
 	})
 
@@ -185,9 +190,56 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc")
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
 		if err == nil {
 			t.Error("expected an error for invalid JSON, but got nil")
+		}
+	})
+
+	t.Run("should mask card number when masking is true", func(t *testing.T) {
+		mockResponse := `{"card_number":{"value":"123456789012","confidence_score":0.99}}`
+		mockModel.GenerateContentFunc = func(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error) {
+			return &genai.GenerateContentResponse{
+				Candidates: []*genai.Candidate{{Content: &genai.Content{Parts: []genai.Part{genai.Text(mockResponse)}}}},
+			}, nil
+		}
+
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", true)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		maskedValue := result.ExtractedData["card_number"].Value
+		expectedMaskedValue := "************9012"
+		if maskedValue != expectedMaskedValue {
+			t.Errorf("expected card number to be masked as %s, but got %s", expectedMaskedValue, maskedValue)
+		}
+	})
+
+	t.Run("should parse forgery warning correctly", func(t *testing.T) {
+		mockResponse := `{"name":{"value":"John Doe","confidence_score":0.9}, "forgery_warning": {"has_signs_of_forgery": true, "reason": "font mismatch"}}`
+		mockModel.GenerateContentFunc = func(ctx context.Context, parts ...genai.Part) (*genai.GenerateContentResponse, error) {
+			return &genai.GenerateContentResponse{
+				Candidates: []*genai.Candidate{{Content: &genai.Content{Parts: []genai.Part{genai.Text(mockResponse)}}}},
+			}, nil
+		}
+
+		result, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if result.ForgeryWarning == nil {
+			t.Fatal("expected forgery warning, but got nil")
+		}
+		if !result.ForgeryWarning.HasSignsOfForgery {
+			t.Error("expected HasSignsOfForgery to be true")
+		}
+		if result.ForgeryWarning.Reason != "font mismatch" {
+			t.Errorf("expected forgery reason 'font mismatch', but got '%s'", result.ForgeryWarning.Reason)
+		}
+		if _, ok := result.ExtractedData["forgery_warning"]; ok {
+			t.Error("forgery_warning should not be in extracted data")
 		}
 	})
 
@@ -201,7 +253,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), pdfParts, "test_doc")
+		_, err := client.Extract(context.Background(), pdfParts, "test_doc", false)
 		if err != nil {
 			t.Errorf("unexpected error for PDF: %v", err)
 		}
@@ -211,14 +263,14 @@ func TestExtract(t *testing.T) {
 		unsupportedParts := map[string]FilePart{
 			"front": {Content: []byte("fake data"), MimeType: "application/zip"},
 		}
-		_, err := client.Extract(context.Background(), unsupportedParts, "test_doc")
+		_, err := client.Extract(context.Background(), unsupportedParts, "test_doc", false)
 		if !errors.Is(err, ErrUnsupportedMimeType) {
 			t.Errorf("expected error %v, but got %v", ErrUnsupportedMimeType, err)
 		}
 	})
 
 	t.Run("should return error when doc type is not supported", func(t *testing.T) {
-		_, err := client.Extract(context.Background(), mockFileParts, "unsupported_doc")
+		_, err := client.Extract(context.Background(), mockFileParts, "unsupported_doc", false)
 		if !errors.Is(err, ErrUnsupportedDocumentType) {
 			t.Errorf("expected error %v, but got %v", ErrUnsupportedDocumentType, err)
 		}
@@ -229,7 +281,7 @@ func TestExtract(t *testing.T) {
 			return nil, errors.New("api error")
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc")
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -242,7 +294,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc")
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -263,7 +315,7 @@ func TestExtract(t *testing.T) {
 			}, nil
 		}
 
-		_, err := client.Extract(context.Background(), mockFileParts, "test_doc")
+		_, err := client.Extract(context.Background(), mockFileParts, "test_doc", false)
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
