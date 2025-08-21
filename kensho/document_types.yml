@@ -9,8 +9,9 @@ documents:
       2.  The back side may contain updated information (like a new address). If information appears on both sides (e.g., address), prioritize the information from the back side.
       3.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
       4.  Extract the fields listed in the "JSON Structure" section below.
-      5.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
-      6.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation, unusual holograms).
+      5.  **Date Formatting**: For all date fields (`birth_date`, `issue_date`, `expiry_date`), return the date using only the Japanese era name (e.g., `平成30年2月1日`) or only the Western year (e.g., `2018年2月1日`). **Do not combine them** (e.g., `2018年(平成30年)2月1日`).
+      6.  Return **only** a single, minified JSON object containing the extracted data. Do not include any explanatory text, markdown, or any characters outside of the JSON object.
+      7.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery (e.g., inconsistent fonts, unnatural text placement, evidence of photo manipulation, unusual holograms).
 
       **JSON Structure**:
       {
