@@ -27,7 +27,7 @@ func (m *mockGenerativeModel) GenerateContent(ctx context.Context, parts ...gena
 
 func TestNewClient(t *testing.T) {
 	t.Run("should return error when api key is not set", func(t *testing.T) {
-		_, err := NewClient(context.Background(), "")
+		_, err := NewClient(context.Background(), "", "")
 		if err == nil {
 			t.Error("expected error, but got nil")
 		}
@@ -40,7 +40,7 @@ func TestNewClient(t *testing.T) {
 		if os.Getenv("GEMINI_API_KEY") == "" {
 			t.Skip("GEMINI_API_KEY not set, skipping integration-like test")
 		}
-		client, err := NewClient(context.Background(), os.Getenv("GEMINI_API_KEY"))
+		client, err := NewClient(context.Background(), os.Getenv("GEMINI_API_KEY"), "")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -71,7 +71,7 @@ documents:
 		if os.Getenv("GEMINI_API_KEY") == "" {
 			t.Skip("GEMINI_API_KEY not set, skipping integration-like test")
 		}
-		client, err := NewClientWithConfigPath(context.Background(), os.Getenv("GEMINI_API_KEY"), configFile.Name())
+		client, err := NewClientWithConfigPath(context.Background(), os.Getenv("GEMINI_API_KEY"), "", configFile.Name())
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

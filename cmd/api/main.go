@@ -25,7 +25,8 @@ func main() {
 	var err error
 
 	// The client now uses the default embedded configuration.
-	kenshoClient, err = kensho.NewClient(ctx, os.Getenv("GEMINI_API_KEY"))
+	modelName := os.Getenv("GEMINI_MODEL") // Read the model name from environment variable
+	kenshoClient, err = kensho.NewClient(ctx, os.Getenv("GEMINI_API_KEY"), modelName)
 	if err != nil {
 		log.Fatalf("Failed to create kensho client: %v", err)
 	}
