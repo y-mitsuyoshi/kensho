@@ -44,6 +44,480 @@ documents:
     image_parts:
       - front
       - back
+  pharmacist_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese pharmacist's license (薬剤師免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "permanent_address": { "value": "本籍地", "confidence_score": "0.0-1.0" },
+        "license_number": { "value": "薬剤師名簿登録番号", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      permanent_address: "本籍地"
+      license_number: "薬剤師名簿登録番号"
+      registration_date: "登録年月日"
+      birth_date: "生年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  beautician_barber_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese beautician or barber license (美容師免許証 / 理容師免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "permanent_address": { "value": "本籍地", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "license_type": { "value": "免許の種類", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      permanent_address: "本籍地"
+      registration_number: "登録番号"
+      license_type: "免許の種類"
+      registration_date: "登録年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  chef_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese chef's license (調理師免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "permanent_address": { "value": "本籍地", "confidence_score": "0.0-1.0" },
+        "license_number": { "value": "免許番号", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      permanent_address: "本籍地"
+      license_number: "免許番号"
+      registration_date: "登録年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  hazardous_materials_handler_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese hazardous materials handler's license (危険物取扱者免状) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "license_type": { "value": "免状の種類", "confidence_score": "0.0-1.0" },
+        "issuance_number": { "value": "交付番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      license_type: "免状の種類"
+      issuance_number: "交付番号"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  small_vessel_operator_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese small vessel operator's license (小型船舶操縦免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住所", "confidence_score": "0.0-1.0" },
+        "license_type": { "value": "免許の種類", "confidence_score": "0.0-1.0" },
+        "license_number": { "value": "免許証番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "expiry_date": { "value": "有効期間満了日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      address: "住所"
+      license_type: "免許の種類"
+      license_number: "免許証番号"
+      issue_date: "交付年月日"
+      expiry_date: "有効期間満了日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  information_security_specialist_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Registered Information Security Specialist certificate (情報処理安全確保支援士登録証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      registration_number: "登録番号"
+      registration_date: "登録年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  applied_it_engineer_certificate:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Applied Information Technology Engineer exam certificate (応用情報技術者合格証書) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "certificate_number": { "value": "証書番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "合格年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      birth_date: "生年月日"
+      certificate_number: "証書番号"
+      issue_date: "合格年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  architect_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese architect's license (建築士免許証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "permanent_address": { "value": "本籍地", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "license_type": { "value": "免許の種類", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      permanent_address: "本籍地"
+      registration_number: "登録番号"
+      license_type: "免許の種類"
+      registration_date: "登録年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  electrician_license:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese electrician's license (電気工事士免状) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "issuance_number": { "value": "交付番号", "confidence_score": "0.0-1.0" },
+        "license_type": { "value": "免状の種類", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      issuance_number: "交付番号"
+      license_type: "免状の種類"
+      birth_date: "生年月日"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  condominium_management_chief_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese condominium management business chief certificate (管理業務主任者証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "address": { "value": "住所", "confidence_score": "0.0-1.0" },
+        "validity_period": { "value": "有効期間", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      address: "住所"
+      validity_period: "有効期間"
+      registration_number: "登録番号"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  lawyer_id_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese lawyer's ID card (弁護士身分証明書) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "bar_association": { "value": "所属弁護士会", "confidence_score": "0.0-1.0" },
+        "office_address": { "value": "事務所所在地", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "発行日", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      registration_number: "登録番号"
+      bar_association: "所属弁護士会"
+      office_address: "事務所所在地"
+      issue_date: "発行日"
+    image_parts:
+      - front
+  tax_accountant_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese tax accountant's certificate (税理士証票) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      birth_date: "生年月日"
+      registration_number: "登録番号"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  cpa_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese certified public accountant's certificate (公認会計士証票) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "office_name": { "value": "事務所", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      office_name: "事務所"
+      registration_number: "登録番号"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  judicial_scrivener_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese judicial scrivener's member card (司法書士会員証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "bar_association": { "value": "所属司法書士会", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      registration_number: "登録番号"
+      bar_association: "所属司法書士会"
+      issue_date: "交付年月日"
+    image_parts:
+      - front
+  administrative_scrivener_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese administrative scrivener's certificate (行政書士証票) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "office_name": { "value": "事務所", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "issue_date": { "value": "交付年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      office_name: "事務所"
+      registration_number: "登録番号"
+      issue_date: "交付年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
+  mental_health_and_welfare_specialist_card:
+    prompt: |
+      **Role**: You are an expert AI OCR assistant.
+      **Task**: Analyze the provided image of a Japanese Mental Health and Welfare Specialist Registration Card (精神保健福祉士登録証) and extract the requested information.
+
+      **Instructions**:
+      1.  You will be given one image labeled "front".
+      2.  **If a field is blurry or impossible to read, return `null` for that specific field instead of guessing.**
+      3.  Extract the fields listed in the "JSON Structure" section below.
+      4.  Return **only** a single, minified JSON object containing the extracted data.
+      5.  **Forgery Detection**: Analyze the image for any signs of tampering or forgery.
+
+      **JSON Structure**:
+      {
+        "name": { "value": "氏名", "confidence_score": "0.0-1.0" },
+        "birth_date": { "value": "生年月日", "confidence_score": "0.0-1.0" },
+        "registration_number": { "value": "登録番号", "confidence_score": "0.0-1.0" },
+        "registration_date": { "value": "登録年月日", "confidence_score": "0.0-1.0" },
+        "issuing_authority": { "value": "発行者", "confidence_score": "0.0-1.0" },
+        "forgery_warning": { "has_signs_of_forgery": "boolean", "reason": "string describing evidence" }
+      }
+    json_structure:
+      name: "氏名"
+      birth_date: "生年月日"
+      registration_number: "登録番号"
+      registration_date: "登録年月日"
+      issuing_authority: "発行者"
+    image_parts:
+      - front
   student_id_card:
     prompt: |
       **Role**: You are an expert AI OCR assistant.
