@@ -1,16 +1,21 @@
-MIT License
+# Kensho Proprietary License
 
-Copyright (c) 2025 Yuma Mitsuyoshi
+Copyright (c) 2025 Yuma Mitsuyoshi. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software and associated documentation files (the "Software") are proprietary to Yuma Mitsuyoshi.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The Software is confidential and may not be disclosed to any third party without the express written permission of Yuma Mitsuyoshi.
+
+You are granted a limited, non-exclusive, non-transferable, and revocable license to use the Software for your own internal business purposes only.
+
+You may not:
+- Fork, copy, modify, merge, publish, distribute, sublicense, or sell the Software.
+- Use the Software for any commercial purpose without the express written permission of Yuma Mitsuyoshi.
+- Use the Software to develop a competing product or service.
+- Reverse engineer, decompile, or disassemble the Software.
+- Remove or alter any copyright, trademark, or other proprietary notices in the Software.
+
+Any use of the Software in violation of this license will result in the immediate termination of your license and may result in legal action.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

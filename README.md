@@ -1,7 +1,7 @@
 # Kensho Go ライブラリ
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/y-mitsuyoshi/kensho.svg)](https://pkg.go.dev/github.com/y-mitsuyoshi/kensho)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 `Kensho`は、Googleの**Gemini 2.5 Pro**モデルを使用して、運転免許証やマイナンバーカードなどの本人確認書類から情報を高精度に抽出し、JSONオブジェクトとして返すGoライブラリです。「見証」という言葉にインスパイアされています。
 
@@ -284,4 +284,4 @@ curl -X POST http://localhost:8080/api/v1/extract \
 
 ## 📜 ライセンス
 
-このプロジェクトは**MITライセンス**のもとで公開されています。
+このプロジェクトは**プロプライエタリ（独自）ライセンス**です。詳細は`LICENSE`ファイルをご確認ください。
