@@ -33,6 +33,10 @@ func main() {
 	// Defer closing the client to clean up resources.
 	defer kenshoClient.Close()
 
+	// Serve static files from the "static" directory
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/", fs)
+
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/api/v1/extract", extractHandler)
 
